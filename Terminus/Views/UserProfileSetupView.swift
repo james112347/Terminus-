@@ -7,12 +7,25 @@ struct UserProfileSetupView: View {
     @Binding var isPresented: Bool
 
     @State private var currentStep: Int = 0
-    @State private var name: String = ""
-    @State private var lifestyle = LifestyleProfile.default
+    @State private var name: String
+    @State private var lifestyle: LifestyleProfile
     @State private var feedbacks: [HabitFeedback] = []
     @State private var showFeedback: Bool = false
 
     private let totalSteps = 6
+
+    init(isPresented: Binding<Bool>) {
+        _isPresented = isPresented
+        // Pre-load existing profile data if available
+        let existingProfile = UsageDataStore.shared.userProfile
+        if existingProfile.isProfileCompleted {
+            _name = State(initialValue: existingProfile.name)
+            _lifestyle = State(initialValue: existingProfile.lifestyle)
+        } else {
+            _name = State(initialValue: "")
+            _lifestyle = State(initialValue: .default)
+        }
+    }
 
     var body: some View {
         NavigationStack {

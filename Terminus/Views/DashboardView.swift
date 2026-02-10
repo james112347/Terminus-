@@ -4,12 +4,19 @@ import SwiftUI
 struct DashboardView: View {
     @EnvironmentObject var monitor: UsageMonitorViewModel
     @EnvironmentObject var appState: AppState
+    @ObservedObject private var dataStore = UsageDataStore.shared
     @State private var showAnalysis = false
+    @State private var showProfileSetup = false
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 20) {
+                    // Profile completion banner
+                    if !dataStore.userProfile.isProfileCompleted {
+                        profileBanner
+                    }
+
                     // Wellness Score Card
                     wellnessScoreCard
 
@@ -42,6 +49,45 @@ struct DashboardView: View {
             .refreshable {
                 await monitor.runAnalysis()
             }
+            .sheet(isPresented: $showProfileSetup) {
+                UserProfileSetupView(isPresented: $showProfileSetup)
+                    .environmentObject(monitor)
+            }
+        }
+    }
+
+    // MARK: - Profile Banner
+
+    private var profileBanner: some View {
+        Button {
+            showProfileSetup = true
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: "person.crop.circle.badge.questionmark")
+                    .font(.title2)
+                    .foregroundStyle(.orange)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Completa il tuo profilo")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.primary)
+                    Text("Abitudini, orari e stile di vita per analisi AI personalizzate")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .padding()
+            .background(
+                RoundedRectangle(cornerRadius: 14)
+                    .fill(Color.orange.opacity(0.1))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 14)
+                            .stroke(Color.orange.opacity(0.3), lineWidth: 1)
+                    )
+            )
         }
     }
 

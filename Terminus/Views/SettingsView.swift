@@ -3,6 +3,7 @@ import SwiftUI
 /// Settings view for configuring goals, limits, and notifications
 struct SettingsView: View {
     @EnvironmentObject var monitor: UsageMonitorViewModel
+    @ObservedObject private var dataStore = UsageDataStore.shared
     @State private var dailyGoalHours: Double = 2.0
     @State private var socialMediaLimit: Double = 60
     @State private var gamingLimit: Double = 90
@@ -12,17 +13,17 @@ struct SettingsView: View {
     @State private var showResetConfirm: Bool = false
     @State private var showProfileSetup: Bool = false
 
-    private var profile: UserProfile {
-        UsageDataStore.shared.userProfile
-    }
-
     var body: some View {
         NavigationStack {
             Form {
                 // User Profile Section
                 Section {
-                    if profile.isProfileCompleted {
-                        ProfileSummaryRow(profile: profile)
+                    if dataStore.userProfile.isProfileCompleted {
+                        NavigationLink {
+                            ProfileDetailView(profile: dataStore.userProfile)
+                        } label: {
+                            ProfileSummaryRow(profile: dataStore.userProfile)
+                        }
                     } else {
                         HStack {
                             Image(systemName: "person.crop.circle.badge.questionmark")
@@ -42,8 +43,8 @@ struct SettingsView: View {
                         showProfileSetup = true
                     } label: {
                         Label(
-                            profile.isProfileCompleted ? "Modifica Profilo" : "Compila Profilo",
-                            systemImage: profile.isProfileCompleted ? "pencil.circle" : "person.crop.circle.badge.plus"
+                            dataStore.userProfile.isProfileCompleted ? "Modifica Profilo" : "Compila Profilo",
+                            systemImage: dataStore.userProfile.isProfileCompleted ? "pencil.circle" : "person.crop.circle.badge.plus"
                         )
                     }
                 } header: {
