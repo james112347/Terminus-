@@ -10,7 +10,7 @@ on:
 jobs:
   build:
     name: Build iOS App
-    runs-on: macos-12.7.5
+    runs-on: macos-13
 
     steps:
       - name: Checkout
@@ -30,7 +30,7 @@ jobs:
             -scheme Terminus \
             -sdk iphoneos \
             -configuration Release \
-            CONFIGURATION_BUILD_DIR=$PWD/build/Release-iphoneos \
+            -derivedDataPath build/DerivedData \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
@@ -38,9 +38,20 @@ jobs:
 
       - name: Package IPA
         run: |
-          ls -la build/Release-iphoneos/
+          APP_PATH="build/DerivedData/Build/Products/Release-iphoneos/Terminus.app"
+          if [ ! -d "$APP_PATH" ]; then
+            echo "Not at standard path, searching..."
+            APP_PATH=$(find build -name "Terminus.app" -type d | head -1)
+          fi
+          if [ -z "$APP_PATH" ] || [ ! -d "$APP_PATH" ]; then
+            echo "ERROR: Terminus.app not found. Build contents:"
+            find build -name "*.app" -type d 2>/dev/null
+            find build/DerivedData/Build/Products -type d -maxdepth 3 2>/dev/null
+            exit 1
+          fi
+          echo "Found: $APP_PATH"
           mkdir -p build/Payload
-          cp -r build/Release-iphoneos/Terminus.app build/Payload/
+          cp -r "$APP_PATH" build/Payload/
           cd build
           zip -r Terminus.ipa Payload/
           ls -lh Terminus.ipa
