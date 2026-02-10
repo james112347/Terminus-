@@ -16,69 +16,45 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: List available Xcode versions
-        run: ls /Applications/ | grep Xcode
-
       - name: Select Xcode
         run: |
-          # Use latest Xcode available on macos-15
           XCODE_PATH=$(ls -d /Applications/Xcode*.app 2>/dev/null | sort -V | tail -1)
           echo "Using: $XCODE_PATH"
           sudo xcode-select -s "$XCODE_PATH/Contents/Developer"
+          xcodebuild -version
 
-      - name: Show Xcode version
-        run: xcodebuild -version
-
-      - name: List available simulators
-        run: xcrun simctl list devices available | head -30
-
-      - name: Build for iOS Simulator (verification)
+      - name: Build for device (unsigned)
         run: |
           xcodebuild build \
             -project Terminus.xcodeproj \
             -scheme Terminus \
-            -destination 'platform=iOS Simulator,name=iPhone 16 Pro' \
-            -configuration Debug \
-            CODE_SIGNING_ALLOWED=NO \
-            COMPILER_INDEX_STORE_ENABLE=NO \
-            2>&1 | tail -30
-
-      - name: Archive for device (unsigned IPA)
-        run: |
-          xcodebuild archive \
-            -project Terminus.xcodeproj \
-            -scheme Terminus \
-            -archivePath build/Terminus.xcarchive \
-            -destination 'generic/platform=iOS' \
+            -sdk iphoneos \
             -configuration Release \
+            -derivedDataPath build/DerivedData \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
-            AD_HOC_CODE_SIGNING_ALLOWED=YES \
             COMPILER_INDEX_STORE_ENABLE=NO \
-            2>&1 | tail -30
+            2>&1 | tail -20
 
-      - name: Create IPA from archive
+      - name: Package IPA
         run: |
-          echo "=== Archive contents ==="
-          find build/Terminus.xcarchive -name "*.app" -type d 2>/dev/null || true
-          find build/Terminus.xcarchive -maxdepth 4 -type d 2>/dev/null
-          echo "=== Building IPA ==="
-          mkdir -p build/Payload
-          # Find the .app wherever it is in the archive
-          APP_PATH=$(find build/Terminus.xcarchive -name "Terminus.app" -type d | head -1)
+          echo "=== Searching for .app ==="
+          find build/DerivedData -name "*.app" -type d
+          APP_PATH=$(find build/DerivedData -name "Terminus.app" -type d | head -1)
           if [ -z "$APP_PATH" ]; then
-            echo "ERROR: Terminus.app not found in archive"
+            echo "ERROR: Terminus.app not found"
+            find build -type d -maxdepth 5
             exit 1
           fi
-          echo "Found app at: $APP_PATH"
+          echo "Found: $APP_PATH"
+          mkdir -p build/Payload
           cp -r "$APP_PATH" build/Payload/
           cd build
           zip -r Terminus.ipa Payload/
-          echo "IPA size:"
           ls -lh Terminus.ipa
 
-      - name: Upload IPA artifact
+      - name: Upload IPA
         uses: actions/upload-artifact@v4
         with:
           name: Terminus-iOS
