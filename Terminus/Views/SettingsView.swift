@@ -10,10 +10,48 @@ struct SettingsView: View {
     @State private var notificationsEnabled: Bool = true
     @State private var lateNightHour: Int = 23
     @State private var showResetConfirm: Bool = false
+    @State private var showProfileSetup: Bool = false
+
+    private var profile: UserProfile {
+        UsageDataStore.shared.userProfile
+    }
 
     var body: some View {
         NavigationStack {
             Form {
+                // User Profile Section
+                Section {
+                    if profile.isProfileCompleted {
+                        ProfileSummaryRow(profile: profile)
+                    } else {
+                        HStack {
+                            Image(systemName: "person.crop.circle.badge.questionmark")
+                                .foregroundStyle(.orange)
+                                .font(.title3)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Profilo non completato")
+                                    .font(.subheadline.weight(.semibold))
+                                Text("Completa il profilo per analisi AI piu precise")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+
+                    Button {
+                        showProfileSetup = true
+                    } label: {
+                        Label(
+                            profile.isProfileCompleted ? "Modifica Profilo" : "Compila Profilo",
+                            systemImage: profile.isProfileCompleted ? "pencil.circle" : "person.crop.circle.badge.plus"
+                        )
+                    }
+                } header: {
+                    Text("Il Tuo Profilo")
+                } footer: {
+                    Text("Il profilo permette all'AI di darti consigli personalizzati in base alle tue abitudini reali.")
+                }
+
                 // Daily Goal
                 Section {
                     VStack(alignment: .leading, spacing: 8) {
@@ -140,6 +178,10 @@ struct SettingsView: View {
                 }
             }
             .navigationTitle("Impostazioni")
+            .sheet(isPresented: $showProfileSetup) {
+                UserProfileSetupView(isPresented: $showProfileSetup)
+                    .environmentObject(monitor)
+            }
             .alert("Resettare tutti i dati?", isPresented: $showResetConfirm) {
                 Button("Annulla", role: .cancel) {}
                 Button("Resetta", role: .destructive) {
@@ -324,6 +366,51 @@ struct BMADInfoView: View {
         }
         .navigationTitle("BMAD Framework")
         .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+struct ProfileSummaryRow: View {
+    let profile: UserProfile
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Image(systemName: "person.crop.circle.fill")
+                    .foregroundStyle(.indigo)
+                    .font(.title2)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(profile.name.isEmpty ? "Utente" : profile.name)
+                        .font(.subheadline.weight(.semibold))
+                    Text("\(profile.lifestyle.occupation.label) - \(profile.lifestyle.ageRange.label)")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            HStack(spacing: 16) {
+                ProfileTag(icon: profile.lifestyle.chronotype.icon, text: profile.lifestyle.chronotype.label)
+                ProfileTag(icon: profile.lifestyle.activityLevel.icon, text: profile.lifestyle.activityLevel.label)
+                ProfileTag(icon: "bed.double.fill", text: "\(profile.lifestyle.calculateSleepHours())h sonno")
+            }
+        }
+    }
+}
+
+struct ProfileTag: View {
+    let icon: String
+    let text: String
+
+    var body: some View {
+        HStack(spacing: 4) {
+            Image(systemName: icon)
+                .font(.caption2)
+            Text(text)
+                .font(.caption2)
+        }
+        .padding(.horizontal, 6)
+        .padding(.vertical, 3)
+        .background(Color.indigo.opacity(0.1))
+        .clipShape(Capsule())
     }
 }
 

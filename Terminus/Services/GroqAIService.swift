@@ -23,10 +23,32 @@ final class GroqAIService: ObservableObject {
     // MARK: - Wellness Analysis
 
     /// Analyze usage data and generate wellness advice using Ralph Loop methodology
-    func analyzeUsage(_ usageData: UsageAnalysisRequest) async throws -> WellnessAIResponse {
+    func analyzeUsage(_ usageData: UsageAnalysisRequest, userProfile: UserProfile? = nil) async throws -> WellnessAIResponse {
+        let profileContext: String
+        if let profile = userProfile, profile.isProfileCompleted {
+            profileContext = """
+
+            IMPORTANTE - PROFILO UTENTE (usa queste informazioni per personalizzare profondamente l'analisi):
+            Nome: \(profile.name.isEmpty ? "Non specificato" : profile.name)
+            \(profile.lifestyle.aiContextDescription)
+
+            Adatta i tuoi consigli in base a:
+            - Il suo cronotipo e orari di sonno (consigli diversi per mattinieri vs nottambuli)
+            - Il suo lavoro e orari (uno studente ha esigenze diverse da un lavoratore notturno)
+            - Il suo livello di stress (se alto, evita toni colpevolizzanti, sii empatico)
+            - Le sue attivita digitali principali (consigli mirati su quelle specifiche)
+            - I suoi obiettivi personali (focalizza i consigli su quelli)
+            - Il suo livello di attivita fisica (suggerisci alternative offline coerenti)
+            - Il suo contesto sociale (consigli adatti a chi vive solo vs in famiglia)
+            """
+        } else {
+            profileContext = ""
+        }
+
         let systemPrompt = """
         Sei un esperto di benessere digitale e neuroscienze. Analizza i dati di utilizzo \
         dello smartphone e fornisci consigli personalizzati in italiano.
+        \(profileContext)
 
         Considera gli effetti su:
         1. UMORE: Come il tempo schermo influenza serotonina, dopamina e stato emotivo
@@ -35,23 +57,23 @@ final class GroqAIService: ObservableObject {
 
         Usa il metodo RALPH Loop:
         - Review: Rivedi i dati di oggi
-        - Analyze: Analizza i pattern problematici
-        - Learn: Cosa possiamo imparare
-        - Plan: Piano d'azione concreto
-        - Habituate: Suggerisci un'abitudine positiva da costruire
+        - Analyze: Analizza i pattern problematici considerando il profilo dell'utente
+        - Learn: Cosa possiamo imparare in base alle sue abitudini specifiche
+        - Plan: Piano d'azione concreto e realistico per il suo stile di vita
+        - Habituate: Suggerisci un'abitudine positiva coerente con i suoi obiettivi
 
         Rispondi SEMPRE in formato JSON valido con questa struttura esatta (senza markdown, solo JSON puro):
         {
             "moodImpactScore": <1-100>,
             "brainHealthScore": <1-100>,
             "productivityScore": <1-100>,
-            "advice": "<consiglio principale in italiano>",
+            "advice": "<consiglio principale in italiano, personalizzato sul profilo utente>",
             "warnings": [
                 {
                     "severity": "<info|caution|warning|critical>",
                     "title": "<titolo>",
                     "message": "<messaggio>",
-                    "recommendation": "<raccomandazione>"
+                    "recommendation": "<raccomandazione personalizzata>"
                 }
             ],
             "ralphLoop": {
@@ -91,10 +113,17 @@ final class GroqAIService: ObservableObject {
     }
 
     /// Generate a quick tip based on current usage
-    func generateQuickTip(currentMinutes: Int, category: String) async throws -> String {
+    func generateQuickTip(currentMinutes: Int, category: String, userProfile: UserProfile? = nil) async throws -> String {
+        let profileHint: String
+        if let profile = userProfile, profile.isProfileCompleted {
+            profileHint = " L'utente e un \(profile.lifestyle.occupation.label.lowercased()), \(profile.lifestyle.chronotype.label.lowercased()), con livello stress \(profile.lifestyle.stressLevel.label.lowercased()). Personalizza il consiglio."
+        } else {
+            profileHint = ""
+        }
+
         let systemPrompt = """
         Sei un coach di benessere digitale. Dai un consiglio breve e motivante \
-        in italiano (max 2 frasi) sull'utilizzo dello smartphone.
+        in italiano (max 2 frasi) sull'utilizzo dello smartphone.\(profileHint)
         """
 
         let userMessage = """
@@ -109,7 +138,19 @@ final class GroqAIService: ObservableObject {
     }
 
     /// Generate weekly summary with deep insights
-    func generateWeeklySummary(_ weekData: WeeklySummaryRequest) async throws -> String {
+    func generateWeeklySummary(_ weekData: WeeklySummaryRequest, userProfile: UserProfile? = nil) async throws -> String {
+        let profileContext: String
+        if let profile = userProfile, profile.isProfileCompleted {
+            profileContext = """
+
+            Profilo utente per personalizzazione:
+            \(profile.lifestyle.aiContextDescription)
+            Personalizza le azioni concrete in base al suo stile di vita e obiettivi.
+            """
+        } else {
+            profileContext = ""
+        }
+
         let systemPrompt = """
         Sei un neuroscienziato e psicologo specializzato in benessere digitale. \
         Genera un report settimanale dettagliato in italiano che includa:
@@ -119,7 +160,7 @@ final class GroqAIService: ObservableObject {
         3. Confronto con la settimana precedente
         4. 3 azioni concrete per la prossima settimana (metodo GSD)
         5. Un insight scientifico su come lo schermo influenza il cervello
-
+        \(profileContext)
         Sii specifico, usa dati e sii empatico ma onesto.
         """
 

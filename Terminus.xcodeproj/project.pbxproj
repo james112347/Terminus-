@@ -25,6 +25,7 @@
 		A10016 /* WellnessEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10016; };
 		A10017 /* UsageMonitorViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10017; };
 		A10018 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B10018; };
+		A10019 /* UserProfileSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10021; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -49,6 +50,7 @@
 		B10018 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		B10019 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		B10020 /* Terminus.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Terminus.entitlements; sourceTree = "<group>"; };
+		B10021 /* UserProfileSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserProfileSetupView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -112,6 +114,7 @@
 				B10006 /* WellnessView.swift */,
 				B10007 /* ReportDetailView.swift */,
 				B10008 /* SettingsView.swift */,
+				B10021 /* UserProfileSetupView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -239,6 +242,7 @@
 				A10015 /* NotificationService.swift in Sources */,
 				A10016 /* WellnessEngine.swift in Sources */,
 				A10017 /* UsageMonitorViewModel.swift in Sources */,
+				A10019 /* UserProfileSetupView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

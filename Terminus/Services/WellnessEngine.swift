@@ -37,13 +37,13 @@ final class WellnessEngine: ObservableObject {
         }.sorted { $0.minutes > $1.minutes }
 
         // Find peak usage hour
-        let hourFormatter = DateFormatter()
-        hourFormatter.dateFormat = "HH:mm"
         let peakHour = findPeakUsageHour(records)
 
-        // Calculate late night usage (after 11 PM)
+        // Calculate late night usage - use profile bedtime if available
+        let profile = dataStore.userProfile
+        let lateNightCutoff = profile.isProfileCompleted ? profile.lifestyle.bedTime : profile.warningThresholds.lateNightCutoffHour
         let lateNightMinutes = records
-            .filter { Calendar.current.component(.hour, from: $0.startTime) >= 23 }
+            .filter { Calendar.current.component(.hour, from: $0.startTime) >= lateNightCutoff }
             .reduce(0) { $0 + $1.durationMinutes }
 
         let weeklyAvg = dataStore.getWeeklyAverage()
@@ -165,7 +165,8 @@ final class WellnessEngine: ObservableObject {
         let usageData = clarifyUsagePatterns(records)
 
         // GSD Phase 3: Organize (with AI analysis via Ralph Loop)
-        let aiResponse = try await groqService.analyzeUsage(usageData)
+        let userProfile = dataStore.userProfile
+        let aiResponse = try await groqService.analyzeUsage(usageData, userProfile: userProfile)
         let report = organizeIntoReport(usageData: usageData, aiResponse: aiResponse)
 
         // GSD Phase 4: Reflect
@@ -205,7 +206,8 @@ final class WellnessEngine: ObservableObject {
         if socialMinutes > profile.warningThresholds.socialMediaMinutes {
             let tip = try await groqService.generateQuickTip(
                 currentMinutes: socialMinutes,
-                category: "Social Media"
+                category: "Social Media",
+                userProfile: profile
             )
             await MainActor.run {
                 self.currentAlert = WellnessWarning(

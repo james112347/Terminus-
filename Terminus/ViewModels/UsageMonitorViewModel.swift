@@ -154,7 +154,8 @@ final class UsageMonitorViewModel: ObservableObject {
             let minutes = categoryBreakdown.first { $0.category == category }?.totalMinutes ?? 0
             quickTip = try await groqService.generateQuickTip(
                 currentMinutes: minutes,
-                category: category.rawValue
+                category: category.rawValue,
+                userProfile: dataStore.userProfile
             )
         } catch {
             quickTip = "Non è stato possibile ottenere un consiglio in questo momento."
