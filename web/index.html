@@ -591,22 +591,6 @@ input[type="range"]::-webkit-slider-thumb {
         </div>
       </div>
 
-      <!-- Methodologies -->
-      <div class="card">
-        <div class="card-title">Metodologie</div>
-        <div class="method-card" onclick="showMethodModal('gsd')">
-          <h4>📋 Metodo GSD</h4>
-          <p>Capture &rarr; Clarify &rarr; Organize &rarr; Reflect &rarr; Engage</p>
-        </div>
-        <div class="method-card" onclick="showMethodModal('ralph')">
-          <h4>🔄 Ralph Loop</h4>
-          <p>Review &rarr; Analyze &rarr; Learn &rarr; Plan &rarr; Habituate</p>
-        </div>
-        <div class="method-card" onclick="showMethodModal('bmad')">
-          <h4>🏛️ BMAD Framework</h4>
-          <p>Build &rarr; Measure &rarr; Analyze &rarr; Decide</p>
-        </div>
-      </div>
 
       <!-- Info -->
       <div class="card">
@@ -772,7 +756,7 @@ const API = {
   },
 
   async extractFromScreenshot(base64) {
-    updateLoadingPhase('GSD: Capture - Estrazione dati dallo screenshot...');
+    updateLoadingPhase('Lettura screenshot in corso...');
 
     const content = [
       {
@@ -805,35 +789,49 @@ Estrai TUTTI i dati visibili e rispondi SOLO con JSON valido (senza markdown):
   },
 
   async analyzeWellness(usageData) {
-    updateLoadingPhase('GSD: Clarify + Organize - Analisi AI benessere...');
+    updateLoadingPhase('Analisi benessere digitale...');
 
     const goalMin = state.goal;
     const totalMin = usageData.totalMinutes;
     const catStr = usageData.categories.map(c => `- ${c.name}: ${c.minutes} min (${c.type})`).join('\n');
     const appStr = (usageData.apps || []).slice(0, 10).map(a => `- ${a.name}: ${a.minutes} min`).join('\n');
 
-    const systemPrompt = `Sei un esperto di benessere digitale e neuroscienze. Analizza i dati di utilizzo dello smartphone e fornisci consigli in italiano.
+    const systemPrompt = `Sei un neuroscienziato e psicologo italiano specializzato in dipendenza digitale e benessere mentale. Il tuo compito e' analizzare i dati di utilizzo smartphone e dare consigli CONCRETI, SPECIFICI e UTILI in italiano.
 
-Considera gli effetti su:
-1. UMORE: Come il tempo schermo influenza serotonina, dopamina e stato emotivo
-2. CERVELLO: Impatto su attenzione, memoria, qualità del sonno, neuroplasticità
-3. GIORNATA: Produttività, relazioni sociali, attività fisica
+REGOLE IMPORTANTI:
+- Sii DIRETTO e ONESTO: se l'uso e' eccessivo, dillo chiaramente con dati scientifici
+- Dai consigli SPECIFICI con attivita' alternative concrete (es: "fai 20 minuti di camminata", "leggi 15 pagine di un libro", "chiama un amico per 10 minuti")
+- Cita EFFETTI REALI sul cervello (es: "30+ min di social media riducono la materia grigia nella corteccia prefrontale")
+- Se l'uso e' negativo, spiega ESATTAMENTE cosa sta succedendo al cervello e al corpo
+- Suggerisci SOSTITUTI specifici per ogni categoria problematica:
+  * Social Media -> uscire con amici dal vivo, scrivere un diario, fare sport
+  * Gaming -> giochi da tavolo, sport, imparare uno strumento musicale
+  * Intrattenimento -> leggere, podcast educativi, documentari brevi, cucinare
+  * Uso notturno -> meditazione, lettura con luce calda, stretching, preparare il giorno dopo
+- Ogni warning DEVE contenere un consiglio pratico e immediato
+- Il campo "advice" deve essere un paragrafo ricco (3-4 frasi) con insight scientifico + azione concreta
 
-Usa il metodo RALPH Loop:
-- Review: Rivedi i dati di oggi
-- Analyze: Analizza i pattern problematici
-- Learn: Cosa possiamo imparare
-- Plan: Piano d'azione concreto
-- Habituate: Suggerisci un'abitudine positiva
+ANALISI SCIENTIFICA da includere:
+- Effetto sulla dopamina (social media = rilascio intermittente, crea dipendenza)
+- Effetto sulla melatonina (luce blu serale = ritardo del sonno di 30-60 min)
+- Effetto sull'attenzione (ogni notifica = 23 minuti per ritrovare concentrazione)
+- Effetto sull'umore (confronto sociale su Instagram/TikTok = aumento ansia del 25%)
+- Effetto sulla memoria (multitasking digitale = riduzione memoria di lavoro)
 
 Rispondi SOLO con JSON valido (senza markdown, solo JSON puro):
 {
-  "moodImpactScore": <1-100, 100=peggiore>,
-  "brainHealthScore": <1-100, 100=peggiore>,
-  "productivityScore": <1-100, 100=migliore>,
-  "advice": "<consiglio principale>",
-  "warnings": [{"severity": "<info|caution|warning|critical>", "title": "<titolo>", "message": "<msg>", "recommendation": "<rec>"}],
-  "ralphLoop": {"review": "<>", "analyze": "<>", "learn": "<>", "plan": "<>", "habituate": "<>"}
+  "moodImpactScore": <1-100, 100=impatto peggiore su umore>,
+  "brainHealthScore": <1-100, 100=impatto peggiore su cervello>,
+  "productivityScore": <1-100, 100=produttivita migliore>,
+  "advice": "<paragrafo dettagliato 3-4 frasi con insight scientifico E azione concreta da fare ORA>",
+  "warnings": [{"severity": "<info|caution|warning|critical>", "title": "<titolo specifico>", "message": "<spiegazione scientifica dell'effetto negativo>", "recommendation": "<azione CONCRETA e IMMEDIATA da fare, con alternativa specifica>"}],
+  "ralphLoop": {
+    "review": "<riassunto preciso dei dati con confronto all'obiettivo>",
+    "analyze": "<analisi scientifica degli effetti sul cervello basata sulle categorie usate>",
+    "learn": "<cosa insegnano questi dati, con riferimento a studi neuroscientifici>",
+    "plan": "<piano d'azione dettagliato per domani con orari e attivita specifiche>",
+    "habituate": "<una nuova abitudine specifica da iniziare oggi, con passi concreti>"
+  }
 }`;
 
     const userMessage = `Dati smartphone oggi:
@@ -919,7 +917,7 @@ async function startAnalysis() {
 
   try {
     // Step 1: Extract data from screenshot
-    updateLoadingPhase('GSD: Capture - Estrazione dati...');
+    updateLoadingPhase('Estrazione dati dallo screenshot...');
     let usageData;
     try {
       usageData = await API.extractFromScreenshot(state.imageBase64);
@@ -929,20 +927,20 @@ async function startAnalysis() {
     }
 
     // Step 2: Analyze wellness
-    updateLoadingPhase('GSD: Clarify - Analisi pattern...');
+    updateLoadingPhase('Analisi pattern di utilizzo...');
     await new Promise(r => setTimeout(r, 500));
 
     updateLoadingPhase('Ralph Loop: Review + Analyze...');
     const wellness = await API.analyzeWellness(usageData);
 
     // Step 3: Build report
-    updateLoadingPhase('GSD: Organize - Generazione report...');
+    updateLoadingPhase('Generazione report personalizzato...');
     await new Promise(r => setTimeout(r, 300));
 
     const report = buildReport(usageData, wellness);
 
     // Step 4: Save and display
-    updateLoadingPhase('GSD: Engage - Salvataggio...');
+    updateLoadingPhase('Salvataggio risultati...');
     state.latestReport = report;
     state.history.unshift(report);
     if (state.history.length > 50) state.history.pop();
@@ -992,7 +990,7 @@ async function startManualAnalysis() {
   showSection('analyze-loading');
 
   try {
-    updateLoadingPhase('Ralph Loop: Analisi benessere...');
+    updateLoadingPhase('Analisi impatto su cervello e umore...');
     const wellness = await API.analyzeWellness(usageData);
     const report = buildReport(usageData, wellness);
 
