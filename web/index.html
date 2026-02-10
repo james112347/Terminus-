@@ -816,44 +816,44 @@ input[type="range"]::-webkit-slider-thumb {
   <div class="modal">
     <div class="modal-handle"></div>
     <h2 style="font-weight:800; letter-spacing:-0.3px; margin-bottom:4px">Il tuo stato oggi</h2>
-    <p style="font-size:12px; color:var(--text3); margin-bottom:20px; line-height:1.5">Questi dati rendono il calcolo dell'energia e l'analisi AI piu precisi.</p>
+    <p style="font-size:12px; color:var(--text3); margin-bottom:20px; line-height:1.5">Servono per calcolare la tua energia residua reale.</p>
 
     <div class="ctx-group">
-      <div class="ctx-label">Come ti sei sentito al risveglio?</div>
-      <div class="ctx-options" id="ctx-morning">
-        <div class="ctx-opt" data-val="1" onclick="ctxSelect('ctx-morning',this)">Molto stanco</div>
-        <div class="ctx-opt" data-val="2" onclick="ctxSelect('ctx-morning',this)">Stanco</div>
-        <div class="ctx-opt selected" data-val="3" onclick="ctxSelect('ctx-morning',this)">Normale</div>
-        <div class="ctx-opt" data-val="4" onclick="ctxSelect('ctx-morning',this)">Riposato</div>
+      <div class="ctx-label">Quante ore hai dormito stanotte?</div>
+      <div style="display:flex; align-items:center; gap:14px">
+        <input type="range" id="ctx-sleep" min="0" max="12" step="0.5" value="7" style="flex:1"
+          oninput="document.getElementById('ctx-sleep-val').textContent=this.value+'h'">
+        <span id="ctx-sleep-val" style="font-size:20px; font-weight:800; color:var(--accent); min-width:40px; text-align:right">7h</span>
+      </div>
+      <div style="display:flex; justify-content:space-between; font-size:10px; color:var(--text3); margin-top:2px">
+        <span>0h</span><span>4h</span><span>8h</span><span>12h</span>
       </div>
     </div>
 
     <div class="ctx-group">
-      <div class="ctx-label">Come ti senti adesso?</div>
-      <div class="ctx-options" id="ctx-now">
-        <div class="ctx-opt" data-val="1" onclick="ctxSelect('ctx-now',this)">Esausto</div>
-        <div class="ctx-opt" data-val="2" onclick="ctxSelect('ctx-now',this)">Stanco</div>
-        <div class="ctx-opt selected" data-val="3" onclick="ctxSelect('ctx-now',this)">Normale</div>
-        <div class="ctx-opt" data-val="4" onclick="ctxSelect('ctx-now',this)">Energico</div>
+      <div class="ctx-label">Attivita fisica oggi?</div>
+      <div class="ctx-options" id="ctx-activity">
+        <div class="ctx-opt selected" data-val="0" onclick="ctxSelect('ctx-activity',this)">Nessuna</div>
+        <div class="ctx-opt" data-val="1" onclick="ctxSelect('ctx-activity',this)">Leggera</div>
+        <div class="ctx-opt" data-val="2" onclick="ctxSelect('ctx-activity',this)">Moderata</div>
+        <div class="ctx-opt" data-val="3" onclick="ctxSelect('ctx-activity',this)">Intensa</div>
       </div>
     </div>
 
     <div class="ctx-group">
-      <div class="ctx-label">Quando hai usato di piu il telefono?</div>
-      <div class="ctx-options" id="ctx-period">
-        <div class="ctx-opt" data-val="morning" onclick="ctxSelect('ctx-period',this)">Mattina</div>
-        <div class="ctx-opt" data-val="afternoon" onclick="ctxSelect('ctx-period',this)">Pomeriggio</div>
-        <div class="ctx-opt selected" data-val="evening" onclick="ctxSelect('ctx-period',this)">Sera/Notte</div>
-        <div class="ctx-opt" data-val="allday" onclick="ctxSelect('ctx-period',this)">Tutto il giorno</div>
+      <div class="ctx-label">Livello di stress oggi?</div>
+      <div class="ctx-options" id="ctx-stress">
+        <div class="ctx-opt" data-val="0" onclick="ctxSelect('ctx-stress',this)">Basso</div>
+        <div class="ctx-opt selected" data-val="1" onclick="ctxSelect('ctx-stress',this)">Medio</div>
+        <div class="ctx-opt" data-val="2" onclick="ctxSelect('ctx-stress',this)">Alto</div>
       </div>
     </div>
 
     <div class="ctx-group" style="margin-bottom:24px">
-      <div class="ctx-label">Ora attuale</div>
       <div class="ctx-time-auto">
         <div class="ctx-time-dot"></div>
         <span id="ctx-current-time">--:--</span>
-        <span style="font-size:11px; color:var(--text3); font-weight:500; margin-left:auto">Rilevata automaticamente</span>
+        <span style="font-size:11px; color:var(--text3); font-weight:500; margin-left:auto">Ora rilevata</span>
       </div>
     </div>
 
@@ -1000,19 +1000,18 @@ Estrai TUTTI i dati visibili e rispondi SOLO con JSON valido (senza markdown):
 
     // Context data for personalized analysis
     const ctx = state.context || {};
-    const morningLabels = { 1:'molto stanco', 2:'stanco', 3:'normale', 4:'riposato' };
-    const nowLabels = { 1:'esausto', 2:'stanco', 3:'normale', 4:'energico' };
-    const periodLabels = { morning:'mattina', afternoon:'pomeriggio', evening:'sera/notte', allday:'tutto il giorno' };
-    const ctxMorning = morningLabels[ctx.morningEnergy] || 'non specificato';
-    const ctxNow = nowLabels[ctx.currentFeeling] || 'non specificato';
-    const ctxPeriod = periodLabels[ctx.usagePeriod] || 'non specificato';
+    const sleepH = Number(ctx.sleepHours) || 7;
+    const actLabels = ['nessuna','leggera','moderata','intensa'];
+    const stressLabels = ['basso','medio','alto'];
+    const ctxActivity = actLabels[Number(ctx.activity) || 0];
+    const ctxStress = stressLabels[Number(ctx.stress) || 1];
     const ctxTime = ctx.currentTime || '--:--';
 
     const systemPrompt = `Sei un consulente di benessere digitale. Analizza i dati e rispondi in italiano con JSON puro.
 
 CONTESTO: L'utente ha usato il telefono ${totalMin} minuti su un obiettivo di ${goalMin}. Livello: ${severity}.
-STATO UTENTE: Al risveglio si sentiva "${ctxMorning}", ora si sente "${ctxNow}". Uso concentrato: ${ctxPeriod}. Ora attuale: ${ctxTime}.
-NOTA: Tieni conto dello stato fisico/mentale dell'utente nei consigli. Se e' stanco/esausto, suggerisci azioni di recupero immediate. Se l'uso e' serale, enfatizza l'impatto sul sonno.
+STATO UTENTE: Ha dormito ${sleepH}h, attivita fisica: ${ctxActivity}, stress: ${ctxStress}. Ora: ${ctxTime}.
+NOTA: Personalizza i consigli sullo stato reale. Se ha dormito poco (<6h), priorita al recupero. Se stress alto, suggerisci tecniche di decompressione senza schermo. Se nessuna attivita fisica, includi movimento come alternativa al telefono.
 
 ISTRUZIONI PER OGNI CAMPO (ogni campo ha uno scopo diverso - NON ripetere le stesse informazioni tra campi):
 
@@ -1062,9 +1061,10 @@ Sblocchi: ${usageData.pickups || 'N/D'}
 Notifiche: ${usageData.notifications || 'N/D'}
 
 Stato utente:
-- Al risveglio: ${ctxMorning}
-- Ora (${ctxTime}): ${ctxNow}
-- Uso concentrato: ${ctxPeriod}`;
+- Sonno: ${sleepH} ore
+- Attivita fisica: ${ctxActivity}
+- Stress: ${ctxStress}
+- Ora analisi: ${ctxTime}`;
 
     const result = await this.callGroq(CONFIG.TEXT_MODEL, [
       { role: 'system', content: systemPrompt },
@@ -1133,12 +1133,12 @@ function ctxSelect(groupId, el) {
 }
 
 function getContextData() {
-  const morning = parseInt(document.querySelector('#ctx-morning .ctx-opt.selected')?.dataset.val) || 3;
-  const now = parseInt(document.querySelector('#ctx-now .ctx-opt.selected')?.dataset.val) || 3;
-  const period = document.querySelector('#ctx-period .ctx-opt.selected')?.dataset.val || 'evening';
+  const sleepHours = parseFloat(document.getElementById('ctx-sleep').value) || 7;
+  const activity = parseInt(document.querySelector('#ctx-activity .ctx-opt.selected')?.dataset.val) || 0;
+  const stress = parseInt(document.querySelector('#ctx-stress .ctx-opt.selected')?.dataset.val) || 1;
   const currentHour = new Date().getHours();
   const currentTime = String(currentHour).padStart(2,'0') + ':' + String(new Date().getMinutes()).padStart(2,'0');
-  return { morningEnergy: morning, currentFeeling: now, usagePeriod: period, currentHour, currentTime };
+  return { sleepHours, activity, stress, currentHour, currentTime };
 }
 
 function showContextPopup(type) {
@@ -1512,61 +1512,71 @@ function catInitial(type) {
 }
 
 // ============ ENERGY CALCULATION ============
-// Modello a 6 fattori: baseline mattutina, durata, qualita, frammentazione, obiettivo, ora del giorno
+// Modello scientifico: sonno (baseline) + attivita fisica + stress + drain telefono + ritmo circadiano
 function calculateEnergy(report) {
   try {
     const ctx = report.context || state.context || {};
     const totalMin = Number(report.totalMinutes) || 0;
     const goalMin = Number(report.goal) || Number(state.goal) || 120;
-    if (totalMin <= 0) return ctx.morningEnergy ? [70,80,90,100][ctx.morningEnergy - 1] || 100 : 100;
 
-    // 1. BASELINE MATTUTINA - non tutti partono da 100
-    const morningMap = { 1: 65, 2: 78, 3: 90, 4: 100 }; // molto stanco → riposato
-    let energy = morningMap[ctx.morningEnergy] || 90;
+    // 1. SONNO → baseline (il fattore piu importante)
+    // Curva non lineare: sotto 5h crolla, 7-8h ottimale, oltre 9h rendimenti decrescenti
+    const sleep = Number(ctx.sleepHours) || 7;
+    let baseline;
+    if (sleep <= 3) baseline = 35;
+    else if (sleep <= 4) baseline = 48;
+    else if (sleep <= 5) baseline = 60;
+    else if (sleep <= 6) baseline = 73;
+    else if (sleep <= 7) baseline = 85;
+    else if (sleep <= 8) baseline = 95;
+    else if (sleep <= 9) baseline = 98;
+    else baseline = 95; // troppo sonno = groggy
 
-    // 2. DURATA - curva esponenziale
+    // 2. ATTIVITA FISICA → bonus energia (paradosso dell'esercizio)
+    const activityBonus = [0, 6, 10, 5][Number(ctx.activity) || 0]; // nessuna/leggera/moderata/intensa
+
+    // 3. STRESS → amplifica il drain
+    const stressMultiplier = [0.9, 1.0, 1.2][Number(ctx.stress) || 1]; // basso/medio/alto
+
+    // 4. DURATA SCHERMO → drain esponenziale
     const hours = totalMin / 60;
-    const durationDrain = Math.pow(hours, 1.4) * 8;
+    const durationDrain = Math.pow(hours, 1.3) * 7;
 
-    // 3. QUALITA CONTENUTI
+    // 5. QUALITA CONTENUTI → tipo di drain
     const drainWeights = {
-      socialMedia: 0.13, entertainment: 0.10, gaming: 0.09,
-      news: 0.08, other: 0.06, communication: 0.04,
-      productivity: 0.02, education: 0.02, health: 0.01, utilities: 0.01
+      socialMedia: 0.12, entertainment: 0.09, gaming: 0.08,
+      news: 0.07, other: 0.05, communication: 0.03,
+      productivity: 0.02, education: 0.01, health: 0.01, utilities: 0.01
     };
-    let qualityDrain = 0;
+    let contentDrain = 0;
     (report.categories || []).forEach(c => {
-      const min = Number(c.minutes) || 0;
-      const w = drainWeights[c.type] || 0.06;
-      qualityDrain += min * w;
+      contentDrain += (Number(c.minutes) || 0) * (drainWeights[c.type] || 0.05);
     });
 
-    // 4. FRAMMENTAZIONE - sblocchi e notifiche
+    // 6. FRAMMENTAZIONE → sblocchi + notifiche
     const pickups = Number(report.pickups) || 0;
     const notifications = Number(report.notifications) || 0;
-    const fragmentDrain = Math.min(15, pickups * 0.12 + notifications * 0.04);
+    const fragmentDrain = Math.min(12, pickups * 0.1 + notifications * 0.03);
 
-    // 5. SFORAMENTO OBIETTIVO
+    // 7. OBIETTIVO → penalty/bonus
     let goalDrain = 0;
     if (totalMin > goalMin) {
-      const overMin = totalMin - goalMin;
-      goalDrain = Math.pow(overMin / 30, 1.3) * 4;
-    } else {
-      goalDrain = -Math.min(5, (goalMin - totalMin) / goalMin * 8);
+      goalDrain = Math.pow((totalMin - goalMin) / 30, 1.2) * 3;
+    } else if (totalMin > 0) {
+      goalDrain = -Math.min(4, (goalMin - totalMin) / goalMin * 6);
     }
 
-    // 6. ORA E PERIODO - uso serale drena di piu (blue light, ritmo circadiano)
-    const periodMultiplier = { morning: 1.0, afternoon: 1.05, evening: 1.2, allday: 1.1 };
-    const pMult = periodMultiplier[ctx.usagePeriod] || 1.0;
-
-    // Bonus/malus ora attuale: se sono le 23 e hai usato 4h, e peggio che alle 10
+    // 8. RITMO CIRCADIANO → ora attuale modifica il drain
     const curHour = Number(ctx.currentHour) || new Date().getHours();
-    let timeDrain = 0;
-    if (curHour >= 22 || curHour < 5) timeDrain = 6;
-    else if (curHour >= 20) timeDrain = 3;
+    let circadianMult = 1.0;
+    if (curHour >= 22 || curHour < 6) circadianMult = 1.25;      // notte
+    else if (curHour >= 13 && curHour < 15) circadianMult = 1.1;  // calo post-pranzo
+    else if (curHour >= 20) circadianMult = 1.15;                  // sera
 
-    const totalDrain = (durationDrain + qualityDrain + fragmentDrain + goalDrain) * pMult + timeDrain;
-    energy = energy - totalDrain;
+    // Calcolo finale
+    const startEnergy = Math.min(100, baseline + activityBonus);
+    const phoneDrain = (durationDrain + contentDrain + fragmentDrain + goalDrain) * stressMultiplier * circadianMult;
+    const energy = startEnergy - phoneDrain;
 
     const result = Math.round(Math.max(0, Math.min(100, energy)));
     return isNaN(result) ? 50 : result;
@@ -1575,33 +1585,42 @@ function calculateEnergy(report) {
   }
 }
 
-function buildEnergyFactorsHTML(report) {
+function getEnergyBreakdown(report) {
   const ctx = report.context || {};
   const totalMin = Number(report.totalMinutes) || 0;
   const goalMin = Number(report.goal) || state.goal || 120;
-  const morningMap = { 1: 65, 2: 78, 3: 90, 4: 100 };
-  const baseline = morningMap[ctx.morningEnergy] || 90;
+  const sleep = Number(ctx.sleepHours) || 7;
+  let baseline;
+  if (sleep <= 3) baseline = 35; else if (sleep <= 4) baseline = 48;
+  else if (sleep <= 5) baseline = 60; else if (sleep <= 6) baseline = 73;
+  else if (sleep <= 7) baseline = 85; else if (sleep <= 8) baseline = 95;
+  else if (sleep <= 9) baseline = 98; else baseline = 95;
+  const actBonus = [0, 6, 10, 5][Number(ctx.activity) || 0];
+  const startE = Math.min(100, baseline + actBonus);
   const hours = totalMin / 60;
-  const dDrain = Math.round(Math.pow(hours, 1.4) * 8);
-  const drainW = { socialMedia:0.13, entertainment:0.10, gaming:0.09, news:0.08, other:0.06, communication:0.04, productivity:0.02, education:0.02, health:0.01, utilities:0.01 };
-  let qDrain = 0;
-  (report.categories||[]).forEach(c => { qDrain += (Number(c.minutes)||0) * (drainW[c.type]||0.06); });
-  qDrain = Math.round(qDrain);
-  const fDrain = Math.round(Math.min(15, (Number(report.pickups)||0)*0.12 + (Number(report.notifications)||0)*0.04));
+  const dDrain = Math.round(Math.pow(hours, 1.3) * 7);
+  const drainW = { socialMedia:0.12, entertainment:0.09, gaming:0.08, news:0.07, other:0.05, communication:0.03, productivity:0.02, education:0.01, health:0.01, utilities:0.01 };
+  let cDrain = 0;
+  (report.categories||[]).forEach(c => { cDrain += (Number(c.minutes)||0)*(drainW[c.type]||0.05); });
+  cDrain = Math.round(cDrain);
+  const fDrain = Math.round(Math.min(12, (Number(report.pickups)||0)*0.1+(Number(report.notifications)||0)*0.03));
   let gDrain = 0;
-  if (totalMin > goalMin) gDrain = Math.round(Math.pow((totalMin-goalMin)/30, 1.3)*4);
-  const periodLabels = { morning:'Mattina', afternoon:'Pomeriggio', evening:'Sera', allday:'Giornata' };
-  const periodL = periodLabels[ctx.usagePeriod] || '';
-  const periodMult = { morning:1.0, afternoon:1.05, evening:1.2, allday:1.1 };
-  const pM = periodMult[ctx.usagePeriod];
-  const periodNote = pM && pM > 1.0 ? ` (${periodL} x${pM})` : '';
+  if (totalMin > goalMin) gDrain = Math.round(Math.pow((totalMin-goalMin)/30, 1.2)*3);
+  const stressL = ['Basso','Medio','Alto'][Number(ctx.stress)||1];
+  const stressM = [0.9,1.0,1.2][Number(ctx.stress)||1];
+  return { startE, baseline, actBonus, dDrain, cDrain, fDrain, gDrain, stressL, stressM, sleep, totalMin, goalMin };
+}
+
+function buildEnergyFactorsHTML(report) {
+  const b = getEnergyBreakdown(report);
   return `
-    <div class="energy-factor"><div class="energy-factor-dot" style="background:#6c5ce7"></div>Partenza: ${baseline}/100</div>
-    <div class="energy-factor"><div class="energy-factor-dot" style="background:#4a90d9"></div>Durata: -${dDrain}</div>
-    <div class="energy-factor"><div class="energy-factor-dot" style="background:#a855f7"></div>Contenuti: -${qDrain}</div>
-    <div class="energy-factor"><div class="energy-factor-dot" style="background:#f0883e"></div>Interruzioni: -${fDrain}</div>
-    <div class="energy-factor"><div class="energy-factor-dot" style="background:${totalMin > goalMin ? '#e74c6f' : '#26c281'}"></div>Obiettivo: ${totalMin > goalMin ? '-' + gDrain : '+bonus'}</div>
-    ${periodNote ? `<div class="energy-factor"><div class="energy-factor-dot" style="background:#e84393"></div>Periodo${periodNote}</div>` : ''}
+    <div class="energy-factor"><div class="energy-factor-dot" style="background:#4a90d9"></div>Sonno ${b.sleep}h: ${b.baseline}/100</div>
+    <div class="energy-factor"><div class="energy-factor-dot" style="background:#26c281"></div>Attivita: +${b.actBonus}</div>
+    <div class="energy-factor"><div class="energy-factor-dot" style="background:#e74c6f"></div>Schermo: -${b.dDrain}</div>
+    <div class="energy-factor"><div class="energy-factor-dot" style="background:#a855f7"></div>Contenuti: -${b.cDrain}</div>
+    <div class="energy-factor"><div class="energy-factor-dot" style="background:#f0883e"></div>Interruzioni: -${b.fDrain}</div>
+    <div class="energy-factor"><div class="energy-factor-dot" style="background:${b.totalMin > b.goalMin ? '#e74c6f' : '#26c281'}"></div>Obiettivo: ${b.totalMin > b.goalMin ? '-'+b.gDrain : '+bonus'}</div>
+    ${b.stressM !== 1.0 ? `<div class="energy-factor"><div class="energy-factor-dot" style="background:#e84393"></div>Stress ${b.stressL}: x${b.stressM}</div>` : ''}
   `;
 }
 
