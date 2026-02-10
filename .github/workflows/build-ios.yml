@@ -10,7 +10,7 @@ on:
 jobs:
   build:
     name: Build iOS App
-    runs-on: macos-13
+    runs-on: macos-14
 
     steps:
       - name: Checkout
@@ -22,34 +22,67 @@ jobs:
           echo "Using: $XCODE_PATH"
           sudo xcode-select -s "$XCODE_PATH/Contents/Developer"
           xcodebuild -version
+          swift --version
+
+      - name: Show build settings
+        run: |
+          xcodebuild -project Terminus.xcodeproj \
+            -scheme Terminus \
+            -sdk iphoneos \
+            -configuration Release \
+            -showBuildSettings \
+            -derivedDataPath "$PWD/build/DerivedData" \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO 2>/dev/null | \
+            grep -E 'BUILT_PRODUCTS_DIR|TARGET_BUILD_DIR|SYMROOT|OBJROOT|PRODUCT_NAME|FULL_PRODUCT_NAME|SWIFT_VERSION|IPHONEOS_DEPLOYMENT_TARGET' || true
 
       - name: Build for device (unsigned)
         run: |
+          set -o pipefail
           xcodebuild build \
             -project Terminus.xcodeproj \
             -scheme Terminus \
             -sdk iphoneos \
             -configuration Release \
-            -derivedDataPath build/DerivedData \
+            -derivedDataPath "$PWD/build/DerivedData" \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
-            COMPILER_INDEX_STORE_ENABLE=NO
+            COMPILER_INDEX_STORE_ENABLE=NO \
+            | tee /tmp/xcodebuild.log | tail -30
+          echo "Build exit code: $?"
 
       - name: Package IPA
         run: |
-          APP_PATH="build/DerivedData/Build/Products/Release-iphoneos/Terminus.app"
+          echo "=== Looking for .app bundles ==="
+          find "$PWD/build" -name "*.app" -type d 2>/dev/null || echo "No .app found"
+          echo ""
+          echo "=== DerivedData/Build/Products structure ==="
+          ls -laR "$PWD/build/DerivedData/Build/Products/" 2>/dev/null | head -40 || echo "Products dir not found"
+          echo "================================"
+
+          # Try standard path first
+          APP_PATH="$PWD/build/DerivedData/Build/Products/Release-iphoneos/Terminus.app"
           if [ ! -d "$APP_PATH" ]; then
-            echo "Not at standard path, searching..."
-            APP_PATH=$(find build -name "Terminus.app" -type d | head -1)
+            echo "Not at standard path, searching everywhere..."
+            APP_PATH=$(find "$PWD/build" -name "Terminus.app" -type d 2>/dev/null | head -1)
           fi
+
           if [ -z "$APP_PATH" ] || [ ! -d "$APP_PATH" ]; then
-            echo "ERROR: Terminus.app not found. Build contents:"
-            find build -name "*.app" -type d 2>/dev/null
-            find build/DerivedData/Build/Products -type d -maxdepth 3 2>/dev/null
+            echo "ERROR: Terminus.app not found!"
+            echo ""
+            echo "=== Full build directory tree ==="
+            find "$PWD/build" -type d -maxdepth 6 2>/dev/null
+            echo ""
+            echo "=== Last 50 lines of build log ==="
+            tail -50 /tmp/xcodebuild.log 2>/dev/null || true
             exit 1
           fi
-          echo "Found: $APP_PATH"
+
+          echo "Found app at: $APP_PATH"
+          ls -la "$APP_PATH/"
+
           mkdir -p build/Payload
           cp -r "$APP_PATH" build/Payload/
           cd build

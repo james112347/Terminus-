@@ -25,7 +25,6 @@
 		A10016 /* WellnessEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10016; };
 		A10017 /* UsageMonitorViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10017; };
 		A10018 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B10018; };
-		A10019 /* Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = B10019; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -213,7 +212,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				A10018 /* Assets.xcassets in Resources */,
-				A10019 /* Info.plist in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -324,7 +322,7 @@
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_VERSION = 6.0;
+				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Debug;
@@ -354,7 +352,7 @@
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_VERSION = 6.0;
+				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Release;
