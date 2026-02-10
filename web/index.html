@@ -379,6 +379,29 @@ input[type="range"]::-webkit-slider-thumb {
   border-radius: 14px; padding: 16px;
   margin-bottom: 14px; font-size: 13px; color: var(--red); line-height: 1.6;
 }
+
+/* Context Popup */
+.ctx-group { margin-bottom: 20px; }
+.ctx-label {
+  font-size: 12px; font-weight: 700; color: var(--text);
+  margin-bottom: 10px; line-height: 1.5;
+}
+.ctx-options { display: flex; flex-wrap: wrap; gap: 8px; }
+.ctx-opt {
+  padding: 10px 14px; border-radius: 12px;
+  background: var(--bg3); border: 2px solid transparent;
+  font-size: 13px; font-weight: 600; color: var(--text2);
+  cursor: pointer; transition: all 0.15s; flex: 1; min-width: 0;
+  text-align: center; line-height: 1.3;
+}
+.ctx-opt:active { transform: scale(0.96); }
+.ctx-opt.selected { background: rgba(108,92,231,0.1); border-color: var(--accent); color: var(--accent); }
+.ctx-time-auto {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 16px; background: var(--bg3); border-radius: 12px;
+  font-size: 14px; font-weight: 600; color: var(--text);
+}
+.ctx-time-dot { width: 8px; height: 8px; border-radius: 50%; background: #26c281; }
 </style>
 </head>
 <body>
@@ -788,6 +811,58 @@ input[type="range"]::-webkit-slider-thumb {
   </div>
 </div>
 
+<!-- Context Popup -->
+<div class="modal-overlay" id="context-modal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h2 style="font-weight:800; letter-spacing:-0.3px; margin-bottom:4px">Il tuo stato oggi</h2>
+    <p style="font-size:12px; color:var(--text3); margin-bottom:20px; line-height:1.5">Questi dati rendono il calcolo dell'energia e l'analisi AI piu precisi.</p>
+
+    <div class="ctx-group">
+      <div class="ctx-label">Come ti sei sentito al risveglio?</div>
+      <div class="ctx-options" id="ctx-morning">
+        <div class="ctx-opt" data-val="1" onclick="ctxSelect('ctx-morning',this)">Molto stanco</div>
+        <div class="ctx-opt" data-val="2" onclick="ctxSelect('ctx-morning',this)">Stanco</div>
+        <div class="ctx-opt selected" data-val="3" onclick="ctxSelect('ctx-morning',this)">Normale</div>
+        <div class="ctx-opt" data-val="4" onclick="ctxSelect('ctx-morning',this)">Riposato</div>
+      </div>
+    </div>
+
+    <div class="ctx-group">
+      <div class="ctx-label">Come ti senti adesso?</div>
+      <div class="ctx-options" id="ctx-now">
+        <div class="ctx-opt" data-val="1" onclick="ctxSelect('ctx-now',this)">Esausto</div>
+        <div class="ctx-opt" data-val="2" onclick="ctxSelect('ctx-now',this)">Stanco</div>
+        <div class="ctx-opt selected" data-val="3" onclick="ctxSelect('ctx-now',this)">Normale</div>
+        <div class="ctx-opt" data-val="4" onclick="ctxSelect('ctx-now',this)">Energico</div>
+      </div>
+    </div>
+
+    <div class="ctx-group">
+      <div class="ctx-label">Quando hai usato di piu il telefono?</div>
+      <div class="ctx-options" id="ctx-period">
+        <div class="ctx-opt" data-val="morning" onclick="ctxSelect('ctx-period',this)">Mattina</div>
+        <div class="ctx-opt" data-val="afternoon" onclick="ctxSelect('ctx-period',this)">Pomeriggio</div>
+        <div class="ctx-opt selected" data-val="evening" onclick="ctxSelect('ctx-period',this)">Sera/Notte</div>
+        <div class="ctx-opt" data-val="allday" onclick="ctxSelect('ctx-period',this)">Tutto il giorno</div>
+      </div>
+    </div>
+
+    <div class="ctx-group" style="margin-bottom:24px">
+      <div class="ctx-label">Ora attuale</div>
+      <div class="ctx-time-auto">
+        <div class="ctx-time-dot"></div>
+        <span id="ctx-current-time">--:--</span>
+        <span style="font-size:11px; color:var(--text3); font-weight:500; margin-left:auto">Rilevata automaticamente</span>
+      </div>
+    </div>
+
+    <button class="btn btn-primary" onclick="confirmContext()">
+      Continua con l'analisi
+    </button>
+  </div>
+</div>
+
 <!-- Detail Modal -->
 <div class="modal-overlay" id="detail-modal">
   <div class="modal">
@@ -815,7 +890,8 @@ let state = {
   isAnalyzing: false,
   latestReport: null,
   history: [],
-  goal: 120
+  goal: 120,
+  context: null
 };
 
 // ============ STORAGE ============
@@ -922,9 +998,21 @@ Estrai TUTTI i dati visibili e rispondi SOLO con JSON valido (senza markdown):
     const overuse = ratio > 1;
     const severity = ratio > 2 ? 'critico' : ratio > 1.5 ? 'alto' : ratio > 1 ? 'moderato' : 'nella norma';
 
+    // Context data for personalized analysis
+    const ctx = state.context || {};
+    const morningLabels = { 1:'molto stanco', 2:'stanco', 3:'normale', 4:'riposato' };
+    const nowLabels = { 1:'esausto', 2:'stanco', 3:'normale', 4:'energico' };
+    const periodLabels = { morning:'mattina', afternoon:'pomeriggio', evening:'sera/notte', allday:'tutto il giorno' };
+    const ctxMorning = morningLabels[ctx.morningEnergy] || 'non specificato';
+    const ctxNow = nowLabels[ctx.currentFeeling] || 'non specificato';
+    const ctxPeriod = periodLabels[ctx.usagePeriod] || 'non specificato';
+    const ctxTime = ctx.currentTime || '--:--';
+
     const systemPrompt = `Sei un consulente di benessere digitale. Analizza i dati e rispondi in italiano con JSON puro.
 
 CONTESTO: L'utente ha usato il telefono ${totalMin} minuti su un obiettivo di ${goalMin}. Livello: ${severity}.
+STATO UTENTE: Al risveglio si sentiva "${ctxMorning}", ora si sente "${ctxNow}". Uso concentrato: ${ctxPeriod}. Ora attuale: ${ctxTime}.
+NOTA: Tieni conto dello stato fisico/mentale dell'utente nei consigli. Se e' stanco/esausto, suggerisci azioni di recupero immediate. Se l'uso e' serale, enfatizza l'impatto sul sonno.
 
 ISTRUZIONI PER OGNI CAMPO (ogni campo ha uno scopo diverso - NON ripetere le stesse informazioni tra campi):
 
@@ -971,7 +1059,12 @@ App principali:
 ${appStr || 'Non disponibile'}
 
 Sblocchi: ${usageData.pickups || 'N/D'}
-Notifiche: ${usageData.notifications || 'N/D'}`;
+Notifiche: ${usageData.notifications || 'N/D'}
+
+Stato utente:
+- Al risveglio: ${ctxMorning}
+- Ora (${ctxTime}): ${ctxNow}
+- Uso concentrato: ${ctxPeriod}`;
 
     const result = await this.callGroq(CONFIG.TEXT_MODEL, [
       { role: 'system', content: systemPrompt },
@@ -1031,42 +1124,76 @@ function clearPreview() {
   document.getElementById('file-input').value = '';
 }
 
+// ============ CONTEXT POPUP ============
+let pendingAnalysisType = null; // 'screenshot' or 'manual'
+
+function ctxSelect(groupId, el) {
+  document.querySelectorAll('#' + groupId + ' .ctx-opt').forEach(o => o.classList.remove('selected'));
+  el.classList.add('selected');
+}
+
+function getContextData() {
+  const morning = parseInt(document.querySelector('#ctx-morning .ctx-opt.selected')?.dataset.val) || 3;
+  const now = parseInt(document.querySelector('#ctx-now .ctx-opt.selected')?.dataset.val) || 3;
+  const period = document.querySelector('#ctx-period .ctx-opt.selected')?.dataset.val || 'evening';
+  const currentHour = new Date().getHours();
+  const currentTime = String(currentHour).padStart(2,'0') + ':' + String(new Date().getMinutes()).padStart(2,'0');
+  return { morningEnergy: morning, currentFeeling: now, usagePeriod: period, currentHour, currentTime };
+}
+
+function showContextPopup(type) {
+  pendingAnalysisType = type;
+  // Update current time
+  const now = new Date();
+  document.getElementById('ctx-current-time').textContent =
+    String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
+  document.getElementById('context-modal').classList.add('show');
+}
+
+function confirmContext() {
+  state.context = getContextData();
+  document.getElementById('context-modal').classList.remove('show');
+  if (pendingAnalysisType === 'screenshot') {
+    runScreenshotAnalysis();
+  } else {
+    runManualAnalysis();
+  }
+}
+
 // ============ ANALYSIS ============
-async function startAnalysis() {
+function startAnalysis() {
   if (!state.imageBase64 || state.isAnalyzing) return;
   if (!CONFIG.API_KEY) {
     showError('Inserisci la chiave API Groq nelle Impostazioni prima di analizzare.');
     return;
   }
-  state.isAnalyzing = true;
+  showContextPopup('screenshot');
+}
 
+async function runScreenshotAnalysis() {
+  state.isAnalyzing = true;
   showSection('analyze-loading');
 
   try {
-    // Step 1: Extract data from screenshot
     updateLoadingPhase('Estrazione dati dallo screenshot...');
     let usageData;
     try {
       usageData = await API.extractFromScreenshot(state.imageBase64);
     } catch(e) {
-      // If vision model fails, try with text model describing the task
       throw new Error('Impossibile estrarre dati dallo screenshot. Prova con inserimento manuale. Errore: ' + e.message);
     }
 
-    // Step 2: Analyze wellness
     updateLoadingPhase('Analisi pattern di utilizzo...');
     await new Promise(r => setTimeout(r, 500));
 
     updateLoadingPhase('Analisi benessere e conseguenze...');
     const wellness = await API.analyzeWellness(usageData);
 
-    // Step 3: Build report
     updateLoadingPhase('Generazione report personalizzato...');
     await new Promise(r => setTimeout(r, 300));
 
     const report = buildReport(usageData, wellness);
 
-    // Step 4: Save and display
     updateLoadingPhase('Salvataggio risultati...');
     state.latestReport = report;
     state.history.unshift(report);
@@ -1085,14 +1212,18 @@ async function startAnalysis() {
   }
 }
 
-async function startManualAnalysis() {
+function startManualAnalysis() {
   if (!CONFIG.API_KEY) {
     showError('Inserisci la chiave API Groq nelle Impostazioni prima di analizzare.');
     return;
   }
   const total = parseInt(document.getElementById('manual-total').value) || 0;
   if (total === 0) { showError('Inserisci almeno il tempo totale.'); return; }
+  showContextPopup('manual');
+}
 
+async function runManualAnalysis() {
+  const total = parseInt(document.getElementById('manual-total').value) || 0;
   const social = parseInt(document.getElementById('manual-social').value) || 0;
   const ent = parseInt(document.getElementById('manual-entertainment').value) || 0;
   const gaming = parseInt(document.getElementById('manual-gaming').value) || 0;
@@ -1160,7 +1291,8 @@ function buildReport(usageData, wellness) {
     actions: wellness.actions || [],
     weeklyHabit: wellness.weeklyHabit || '',
     warnings: wellness.warnings || [],
-    goal: state.goal
+    goal: state.goal,
+    context: state.context || {}
   };
   report.energy = calculateEnergy(report);
   return report;
@@ -1190,23 +1322,7 @@ function displayResults(report) {
     resBar.style.width = energy + '%';
     resBar.style.background = `linear-gradient(90deg, ${startColor}, ${eColor})`;
 
-    const totalMin = Number(report.totalMinutes) || 0;
-    const goalMin = Number(report.goal) || state.goal || 120;
-    const hours = totalMin / 60;
-    const dDrain = Math.round(Math.pow(hours, 1.4) * 8);
-    const drainW = { socialMedia:0.13, entertainment:0.10, gaming:0.09, news:0.08, other:0.06, communication:0.04, productivity:0.02, education:0.02, health:0.01, utilities:0.01 };
-    let qDrain = 0;
-    (report.categories||[]).forEach(c => { qDrain += (Number(c.minutes)||0) * (drainW[c.type]||0.06); });
-    qDrain = Math.round(qDrain);
-    const fDrain = Math.round(Math.min(15, (Number(report.pickups)||0)*0.12 + (Number(report.notifications)||0)*0.04));
-    let gDrain = 0;
-    if (totalMin > goalMin) gDrain = Math.round(Math.pow((totalMin-goalMin)/30, 1.3)*4);
-    document.getElementById('res-energy-factors').innerHTML = `
-      <div class="energy-factor"><div class="energy-factor-dot" style="background:#4a90d9"></div>Durata: -${dDrain}</div>
-      <div class="energy-factor"><div class="energy-factor-dot" style="background:#a855f7"></div>Contenuti: -${qDrain}</div>
-      <div class="energy-factor"><div class="energy-factor-dot" style="background:#f0883e"></div>Interruzioni: -${fDrain}</div>
-      <div class="energy-factor"><div class="energy-factor-dot" style="background:${totalMin > goalMin ? '#e74c6f' : '#26c281'}"></div>Obiettivo: ${totalMin > goalMin ? '-' + gDrain : '+bonus'}</div>
-    `;
+    document.getElementById('res-energy-factors').innerHTML = buildEnergyFactorsHTML(report);
   } catch(e) {}
 
   // Color the wellness score
@@ -1288,23 +1404,7 @@ function updateDashboard(report) {
     bar.style.background = `linear-gradient(90deg, ${startColor}, ${eColor})`;
 
     // Energy breakdown factors
-    const totalMin = Number(report.totalMinutes) || 0;
-    const goalMin = Number(report.goal) || state.goal || 120;
-    const hours = totalMin / 60;
-    const durationDrain = Math.round(Math.pow(hours, 1.4) * 8);
-    const drainW = { socialMedia:0.13, entertainment:0.10, gaming:0.09, news:0.08, other:0.06, communication:0.04, productivity:0.02, education:0.02, health:0.01, utilities:0.01 };
-    let qualityD = 0;
-    (report.categories||[]).forEach(c => { qualityD += (Number(c.minutes)||0) * (drainW[c.type]||0.06); });
-    qualityD = Math.round(qualityD);
-    const fragD = Math.round(Math.min(15, (Number(report.pickups)||0)*0.12 + (Number(report.notifications)||0)*0.04));
-    let goalD = 0;
-    if (totalMin > goalMin) goalD = Math.round(Math.pow((totalMin-goalMin)/30, 1.3)*4);
-    document.getElementById('energy-factors').innerHTML = `
-      <div class="energy-factor"><div class="energy-factor-dot" style="background:#4a90d9"></div>Durata: -${durationDrain}</div>
-      <div class="energy-factor"><div class="energy-factor-dot" style="background:#a855f7"></div>Contenuti: -${qualityD}</div>
-      <div class="energy-factor"><div class="energy-factor-dot" style="background:#f0883e"></div>Interruzioni: -${fragD}</div>
-      <div class="energy-factor"><div class="energy-factor-dot" style="background:${totalMin > goalMin ? '#e74c6f' : '#26c281'}"></div>Obiettivo: ${totalMin > goalMin ? '-' + goalD : '+bonus'}</div>
-    `;
+    document.getElementById('energy-factors').innerHTML = buildEnergyFactorsHTML(report);
   } catch(e) { /* energy card fallback */ }
 
   // Stats
@@ -1412,19 +1512,23 @@ function catInitial(type) {
 }
 
 // ============ ENERGY CALCULATION ============
-// Modello a 4 fattori: durata, qualita contenuti, frammentazione, sforamento obiettivo
+// Modello a 6 fattori: baseline mattutina, durata, qualita, frammentazione, obiettivo, ora del giorno
 function calculateEnergy(report) {
   try {
-    let energy = 100;
+    const ctx = report.context || state.context || {};
     const totalMin = Number(report.totalMinutes) || 0;
     const goalMin = Number(report.goal) || Number(state.goal) || 120;
-    if (totalMin <= 0) return 100; // Nessun uso = energia piena
+    if (totalMin <= 0) return ctx.morningEnergy ? [70,80,90,100][ctx.morningEnergy - 1] || 100 : 100;
 
-    // 1. DURATA - curva esponenziale: primi 60min leggeri, poi accelera
+    // 1. BASELINE MATTUTINA - non tutti partono da 100
+    const morningMap = { 1: 65, 2: 78, 3: 90, 4: 100 }; // molto stanco → riposato
+    let energy = morningMap[ctx.morningEnergy] || 90;
+
+    // 2. DURATA - curva esponenziale
     const hours = totalMin / 60;
     const durationDrain = Math.pow(hours, 1.4) * 8;
 
-    // 2. QUALITA CONTENUTI - ogni categoria drena diversamente
+    // 3. QUALITA CONTENUTI
     const drainWeights = {
       socialMedia: 0.13, entertainment: 0.10, gaming: 0.09,
       news: 0.08, other: 0.06, communication: 0.04,
@@ -1437,12 +1541,12 @@ function calculateEnergy(report) {
       qualityDrain += min * w;
     });
 
-    // 3. FRAMMENTAZIONE - sblocchi e notifiche = context switching
+    // 4. FRAMMENTAZIONE - sblocchi e notifiche
     const pickups = Number(report.pickups) || 0;
     const notifications = Number(report.notifications) || 0;
     const fragmentDrain = Math.min(15, pickups * 0.12 + notifications * 0.04);
 
-    // 4. SFORAMENTO OBIETTIVO - penalita se superi il goal
+    // 5. SFORAMENTO OBIETTIVO
     let goalDrain = 0;
     if (totalMin > goalMin) {
       const overMin = totalMin - goalMin;
@@ -1451,12 +1555,54 @@ function calculateEnergy(report) {
       goalDrain = -Math.min(5, (goalMin - totalMin) / goalMin * 8);
     }
 
-    energy = energy - durationDrain - qualityDrain - fragmentDrain - goalDrain;
+    // 6. ORA E PERIODO - uso serale drena di piu (blue light, ritmo circadiano)
+    const periodMultiplier = { morning: 1.0, afternoon: 1.05, evening: 1.2, allday: 1.1 };
+    const pMult = periodMultiplier[ctx.usagePeriod] || 1.0;
+
+    // Bonus/malus ora attuale: se sono le 23 e hai usato 4h, e peggio che alle 10
+    const curHour = Number(ctx.currentHour) || new Date().getHours();
+    let timeDrain = 0;
+    if (curHour >= 22 || curHour < 5) timeDrain = 6;
+    else if (curHour >= 20) timeDrain = 3;
+
+    const totalDrain = (durationDrain + qualityDrain + fragmentDrain + goalDrain) * pMult + timeDrain;
+    energy = energy - totalDrain;
+
     const result = Math.round(Math.max(0, Math.min(100, energy)));
     return isNaN(result) ? 50 : result;
   } catch(e) {
-    return 50; // Fallback sicuro
+    return 50;
   }
+}
+
+function buildEnergyFactorsHTML(report) {
+  const ctx = report.context || {};
+  const totalMin = Number(report.totalMinutes) || 0;
+  const goalMin = Number(report.goal) || state.goal || 120;
+  const morningMap = { 1: 65, 2: 78, 3: 90, 4: 100 };
+  const baseline = morningMap[ctx.morningEnergy] || 90;
+  const hours = totalMin / 60;
+  const dDrain = Math.round(Math.pow(hours, 1.4) * 8);
+  const drainW = { socialMedia:0.13, entertainment:0.10, gaming:0.09, news:0.08, other:0.06, communication:0.04, productivity:0.02, education:0.02, health:0.01, utilities:0.01 };
+  let qDrain = 0;
+  (report.categories||[]).forEach(c => { qDrain += (Number(c.minutes)||0) * (drainW[c.type]||0.06); });
+  qDrain = Math.round(qDrain);
+  const fDrain = Math.round(Math.min(15, (Number(report.pickups)||0)*0.12 + (Number(report.notifications)||0)*0.04));
+  let gDrain = 0;
+  if (totalMin > goalMin) gDrain = Math.round(Math.pow((totalMin-goalMin)/30, 1.3)*4);
+  const periodLabels = { morning:'Mattina', afternoon:'Pomeriggio', evening:'Sera', allday:'Giornata' };
+  const periodL = periodLabels[ctx.usagePeriod] || '';
+  const periodMult = { morning:1.0, afternoon:1.05, evening:1.2, allday:1.1 };
+  const pM = periodMult[ctx.usagePeriod];
+  const periodNote = pM && pM > 1.0 ? ` (${periodL} x${pM})` : '';
+  return `
+    <div class="energy-factor"><div class="energy-factor-dot" style="background:#6c5ce7"></div>Partenza: ${baseline}/100</div>
+    <div class="energy-factor"><div class="energy-factor-dot" style="background:#4a90d9"></div>Durata: -${dDrain}</div>
+    <div class="energy-factor"><div class="energy-factor-dot" style="background:#a855f7"></div>Contenuti: -${qDrain}</div>
+    <div class="energy-factor"><div class="energy-factor-dot" style="background:#f0883e"></div>Interruzioni: -${fDrain}</div>
+    <div class="energy-factor"><div class="energy-factor-dot" style="background:${totalMin > goalMin ? '#e74c6f' : '#26c281'}"></div>Obiettivo: ${totalMin > goalMin ? '-' + gDrain : '+bonus'}</div>
+    ${periodNote ? `<div class="energy-factor"><div class="energy-factor-dot" style="background:#e84393"></div>Periodo${periodNote}</div>` : ''}
+  `;
 }
 
 function energyLabel(e) {
@@ -1658,6 +1804,9 @@ function init() {
   document.getElementById('setup-modal').addEventListener('click', function(e) {
     // Don't close setup modal on background click if no key
     if (e.target === this && CONFIG.API_KEY) this.classList.remove('show');
+  });
+  document.getElementById('context-modal').addEventListener('click', function(e) {
+    if (e.target === this) this.classList.remove('show');
   });
 }
 
