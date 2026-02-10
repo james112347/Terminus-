@@ -1520,7 +1520,6 @@ function calculateEnergy(report) {
     const goalMin = Number(report.goal) || Number(state.goal) || 120;
 
     // 1. SONNO → baseline (il fattore piu importante)
-    // Curva non lineare: sotto 5h crolla, 7-8h ottimale, oltre 9h rendimenti decrescenti
     const sleep = Number(ctx.sleepHours) || 7;
     let baseline;
     if (sleep <= 3) baseline = 35;
@@ -1530,53 +1529,55 @@ function calculateEnergy(report) {
     else if (sleep <= 7) baseline = 85;
     else if (sleep <= 8) baseline = 95;
     else if (sleep <= 9) baseline = 98;
-    else baseline = 95; // troppo sonno = groggy
+    else baseline = 95;
 
-    // 2. ATTIVITA FISICA → bonus energia (paradosso dell'esercizio)
-    const activityBonus = [0, 6, 10, 5][Number(ctx.activity) || 0]; // nessuna/leggera/moderata/intensa
+    // 2. ATTIVITA FISICA → bonus energia
+    const activityBonus = [0, 6, 10, 5][Number(ctx.activity) || 0];
 
-    // 3. STRESS → amplifica il drain
-    const stressMultiplier = [0.9, 1.0, 1.2][Number(ctx.stress) || 1]; // basso/medio/alto
+    // 3. STRESS → amplifica il drain (ridotto)
+    const stressMultiplier = [0.85, 1.0, 1.15][Number(ctx.stress) || 1];
 
-    // 4. DURATA SCHERMO → drain esponenziale
+    // 4. DURATA SCHERMO → sigmoide (satura a ~35, punto medio a 5h)
     const hours = totalMin / 60;
-    const durationDrain = Math.pow(hours, 1.3) * 7;
+    const durationDrain = 35 / (1 + Math.exp(-(hours - 5) * 0.5));
 
-    // 5. QUALITA CONTENUTI → tipo di drain
+    // 5. QUALITA CONTENUTI → drain con cap a 15
     const drainWeights = {
-      socialMedia: 0.12, entertainment: 0.09, gaming: 0.08,
-      news: 0.07, other: 0.05, communication: 0.03,
-      productivity: 0.02, education: 0.01, health: 0.01, utilities: 0.01
+      socialMedia: 0.04, entertainment: 0.03, gaming: 0.03,
+      news: 0.025, other: 0.02, communication: 0.01,
+      productivity: 0.005, education: 0.003, health: 0.003, utilities: 0.005
     };
     let contentDrain = 0;
     (report.categories || []).forEach(c => {
-      contentDrain += (Number(c.minutes) || 0) * (drainWeights[c.type] || 0.05);
+      contentDrain += (Number(c.minutes) || 0) * (drainWeights[c.type] || 0.02);
     });
+    contentDrain = Math.min(15, contentDrain);
 
-    // 6. FRAMMENTAZIONE → sblocchi + notifiche
+    // 6. FRAMMENTAZIONE → sblocchi + notifiche (cap a 8)
     const pickups = Number(report.pickups) || 0;
     const notifications = Number(report.notifications) || 0;
-    const fragmentDrain = Math.min(12, pickups * 0.1 + notifications * 0.03);
+    const fragmentDrain = Math.min(8, pickups * 0.06 + notifications * 0.02);
 
-    // 7. OBIETTIVO → penalty/bonus
+    // 7. OBIETTIVO → penalty morbida / bonus
     let goalDrain = 0;
     if (totalMin > goalMin) {
-      goalDrain = Math.pow((totalMin - goalMin) / 30, 1.2) * 3;
+      const overMin = totalMin - goalMin;
+      goalDrain = Math.min(10, Math.sqrt(overMin / 20) * 2);
     } else if (totalMin > 0) {
-      goalDrain = -Math.min(4, (goalMin - totalMin) / goalMin * 6);
+      goalDrain = -Math.min(5, (goalMin - totalMin) / goalMin * 8);
     }
 
-    // 8. RITMO CIRCADIANO → ora attuale modifica il drain
+    // 8. RITMO CIRCADIANO → leggera modifica
     const curHour = Number(ctx.currentHour) || new Date().getHours();
     let circadianMult = 1.0;
-    if (curHour >= 22 || curHour < 6) circadianMult = 1.25;      // notte
-    else if (curHour >= 13 && curHour < 15) circadianMult = 1.1;  // calo post-pranzo
-    else if (curHour >= 20) circadianMult = 1.15;                  // sera
+    if (curHour >= 22 || curHour < 6) circadianMult = 1.15;
+    else if (curHour >= 13 && curHour < 15) circadianMult = 1.05;
+    else if (curHour >= 20) circadianMult = 1.08;
 
     // Calcolo finale
     const startEnergy = Math.min(100, baseline + activityBonus);
-    const phoneDrain = (durationDrain + contentDrain + fragmentDrain + goalDrain) * stressMultiplier * circadianMult;
-    const energy = startEnergy - phoneDrain;
+    const totalDrain = (durationDrain + contentDrain + fragmentDrain + goalDrain) * stressMultiplier * circadianMult;
+    const energy = startEnergy - totalDrain;
 
     const result = Math.round(Math.max(0, Math.min(100, energy)));
     return isNaN(result) ? 50 : result;
@@ -1598,16 +1599,19 @@ function getEnergyBreakdown(report) {
   const actBonus = [0, 6, 10, 5][Number(ctx.activity) || 0];
   const startE = Math.min(100, baseline + actBonus);
   const hours = totalMin / 60;
-  const dDrain = Math.round(Math.pow(hours, 1.3) * 7);
-  const drainW = { socialMedia:0.12, entertainment:0.09, gaming:0.08, news:0.07, other:0.05, communication:0.03, productivity:0.02, education:0.01, health:0.01, utilities:0.01 };
+  const dDrain = Math.round(35 / (1 + Math.exp(-(hours - 5) * 0.5)));
+  const drainW = { socialMedia:0.04, entertainment:0.03, gaming:0.03, news:0.025, other:0.02, communication:0.01, productivity:0.005, education:0.003, health:0.003, utilities:0.005 };
   let cDrain = 0;
-  (report.categories||[]).forEach(c => { cDrain += (Number(c.minutes)||0)*(drainW[c.type]||0.05); });
-  cDrain = Math.round(cDrain);
-  const fDrain = Math.round(Math.min(12, (Number(report.pickups)||0)*0.1+(Number(report.notifications)||0)*0.03));
+  (report.categories||[]).forEach(c => { cDrain += (Number(c.minutes)||0)*(drainW[c.type]||0.02); });
+  cDrain = Math.round(Math.min(15, cDrain));
+  const fDrain = Math.round(Math.min(8, (Number(report.pickups)||0)*0.06+(Number(report.notifications)||0)*0.02));
   let gDrain = 0;
-  if (totalMin > goalMin) gDrain = Math.round(Math.pow((totalMin-goalMin)/30, 1.2)*3);
+  if (totalMin > goalMin) {
+    const overMin = totalMin - goalMin;
+    gDrain = Math.round(Math.min(10, Math.sqrt(overMin / 20) * 2));
+  }
   const stressL = ['Basso','Medio','Alto'][Number(ctx.stress)||1];
-  const stressM = [0.9,1.0,1.2][Number(ctx.stress)||1];
+  const stressM = [0.85,1.0,1.15][Number(ctx.stress)||1];
   return { startE, baseline, actBonus, dDrain, cDrain, fDrain, gDrain, stressL, stressM, sleep, totalMin, goalMin };
 }
 
