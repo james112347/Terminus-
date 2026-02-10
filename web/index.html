@@ -404,7 +404,7 @@ input[type="range"]::-webkit-slider-thumb {
 
       <!-- AI Advice -->
       <div class="card fade-up" id="advice-card" style="display:none">
-        <div class="card-title" style="color:var(--indigo)">Consiglio AI</div>
+        <div class="card-title" style="color:var(--indigo)">🔬 Diagnosi AI</div>
         <div class="result-text" id="advice-text"></div>
       </div>
 
@@ -525,10 +525,28 @@ input[type="range"]::-webkit-slider-thumb {
           </div>
         </div>
 
-        <!-- AI Advice -->
+        <!-- Diagnosis -->
         <div class="result-section">
-          <h3>💡 Consiglio AI</h3>
-          <div class="result-text" id="res-advice"></div>
+          <h3>🔬 Diagnosi</h3>
+          <div class="result-text" id="res-diagnosis"></div>
+        </div>
+
+        <!-- Long Term -->
+        <div class="result-section" id="res-longterm-section">
+          <h3>⏳ Conseguenze a lungo termine</h3>
+          <div class="result-text" id="res-longterm"></div>
+        </div>
+
+        <!-- Actions -->
+        <div class="result-section">
+          <h3>🎯 Cosa fare oggi</h3>
+          <div id="res-actions"></div>
+        </div>
+
+        <!-- Weekly Habit -->
+        <div class="result-section">
+          <h3>📅 Abitudine della settimana</h3>
+          <div class="result-text" id="res-habit"></div>
         </div>
 
         <!-- Warnings -->
@@ -791,43 +809,47 @@ Estrai TUTTI i dati visibili e rispondi SOLO con JSON valido (senza markdown):
     const catStr = usageData.categories.map(c => `- ${c.name}: ${c.minutes} min (${c.type})`).join('\n');
     const appStr = (usageData.apps || []).slice(0, 10).map(a => `- ${a.name}: ${a.minutes} min`).join('\n');
 
-    const systemPrompt = `Sei un neuroscienziato e psicologo italiano di fama mondiale, specializzato in dipendenza digitale, neuroplasticita' e benessere mentale. Hai 20 anni di esperienza clinica. Analizza i dati di utilizzo smartphone e fornisci un'analisi APPROFONDITA, MIRATA e SCIENTIFICA in italiano.
+    const ratio = totalMin / goalMin;
+    const overuse = ratio > 1;
+    const severity = ratio > 2 ? 'critico' : ratio > 1.5 ? 'alto' : ratio > 1 ? 'moderato' : 'nella norma';
 
-REGOLE FONDAMENTALI:
-1. Sii DIRETTO e BRUTALMENTE ONESTO: se l'uso e' eccessivo, dillo senza mezzi termini
-2. Ogni affermazione deve essere supportata da dati scientifici reali
-3. I consigli devono essere IPER-SPECIFICI: non "fai esercizio" ma "fai 20 minuti di camminata veloce nel quartiere alle 18:00 invece di scrollare Instagram"
-4. Personalizza tutto in base alle categorie e app SPECIFICHE che l'utente usa
+    const systemPrompt = `Sei un consulente di benessere digitale. Analizza i dati e rispondi in italiano con JSON puro.
 
-CONSEGUENZE A LUNGO TERMINE (OBBLIGATORIO - includi SEMPRE):
-Se l'uso e' eccessivo, DEVI spiegare cosa succedera' nei prossimi anni se continua cosi':
+CONTESTO: L'utente ha usato il telefono ${totalMin} minuti su un obiettivo di ${goalMin}. Livello: ${severity}.
 
-- CERVELLO (1-5 anni): riduzione materia grigia nella corteccia prefrontale (studio Uni. di Zurigo 2020), diminuzione capacita' di concentrazione profonda da 12 sec a 8 sec, atrofia delle aree cerebrali legate all'empatia, rischio di deficit cognitivo precoce
-- SALUTE MENTALE (1-3 anni): aumento del 70% del rischio di depressione con 3+ ore di social media/giorno (studio JAMA Psychiatry), sviluppo di ansia sociale cronica, sindrome da confronto sociale permanente, isolamento progressivo
-- SONNO (6 mesi-2 anni): sviluppo di insonnia cronica, alterazione permanente del ritmo circadiano, riduzione del sonno REM del 20-30%, invecchiamento cellulare accelerato
-- RELAZIONI (1-3 anni): riduzione del 40% della qualita' delle relazioni interpersonali, perdita progressiva delle capacita' di conversazione faccia a faccia, phubbing cronico
-- POSTURA E VISTA (1-5 anni): sindrome del collo da smartphone (text neck), miopia progressiva, affaticamento oculare cronico, mal di testa tensivi
-- PRODUTTIVITA' (immediato-2 anni): perdita di 2-3 ore produttive al giorno per frammentazione dell'attenzione, incapacita' di lavoro profondo (deep work), multitasking cronico che riduce il QI effettivo di 10-15 punti
+ISTRUZIONI PER OGNI CAMPO (ogni campo ha uno scopo diverso - NON ripetere le stesse informazioni tra campi):
 
-SOSTITUTI SPECIFICI per ogni categoria:
-- Social Media: chiama un amico per 15 min, scrivi 1 pagina di diario, fai una passeggiata di 20 min, impara 10 parole di una nuova lingua
-- Gaming: giochi da tavolo con amici/famiglia, impara uno strumento musicale (anche 10 min), fai sport o vai in palestra, cucina un piatto nuovo
-- Video/Streaming: leggi 20 pagine di un libro, ascolta un podcast educativo, guarda un documentario breve (max 30 min), disegna o fai arte
-- Uso notturno (dopo le 22): meditazione guidata 10 min, stretching/yoga, leggi con luce calda, prepara la lista di cose da fare per domani, ascolta musica rilassante
-- Messaggistica eccessiva: organizza un incontro dal vivo, fai una videochiamata breve invece di 50 messaggi, metti il telefono in modalita' aereo per 1 ora
+1. "diagnosis" = Cosa sta succedendo ORA al corpo e al cervello, basandoti sulle specifiche app/categorie usate. Cita un dato scientifico reale legato alla categoria piu' usata. Max 2 frasi.
 
-PIANO D'AZIONE CONCRETO (includi nel campo advice):
-- Suggerisci orari precisi per ridurre l'uso (es: "dalle 8 alle 10 studia senza telefono, alle 12 controlla messaggi per 15 min")
-- Proponi la regola 20-20-20 per gli occhi (ogni 20 min, guarda a 20 piedi di distanza per 20 sec)
-- Suggerisci app di blocco se l'uso supera il 150% dell'obiettivo
+2. "longTerm" = SOLO conseguenze future (1-5 anni) se mantiene queste abitudini. Sii specifico: non "problemi di salute" ma "dopo 2 anni di 3h/giorno di social, il rischio di depressione aumenta del 66% (JAMA Psychiatry)". Max 3 frasi, ognuna su un aspetto diverso (cervello, corpo, relazioni).
 
-Rispondi SOLO con JSON valido (senza markdown, senza backtick, solo JSON puro):
+3. "actions" = Array di 3 azioni. Ogni azione deve essere:
+   - Specifica (con numeri, durate, orari)
+   - Alternativa DIRETTA a un'app/categoria che l'utente sta usando troppo
+   - Realizzabile oggi
+   Esempio: NON "fai sport" ma "Alle 18:00, invece di aprire TikTok, esci per 20 min di camminata veloce"
+
+4. "weeklyHabit" = UNA sola nuova abitudine settimanale da costruire, con passi graduali. Esempio: "Settimana 1: telefono in un'altra stanza durante i pasti. Settimana 2: aggiungi 30 min senza telefono prima di dormire."
+
+5. "warnings" = Solo per categorie/app REALMENTE problematiche nei dati. Non inventare warning se l'uso e' equilibrato. Ogni warning ha un campo separato per problema e soluzione.
+
+REGOLE:
+- Guarda i DATI REALI: se l'uso e' basso e bilanciato, dai feedback positivo
+- Se e' eccessivo, sii diretto ma costruttivo
+- MAI ripetere la stessa informazione in campi diversi
+- MAI dare consigli vaghi ("riduci l'uso", "fai attenzione") - solo azioni precise
+- Personalizza tutto sulle app/categorie SPECIFICHE nei dati
+
+JSON (senza markdown, solo JSON puro):
 {
-  "moodImpactScore": <1-100, 100=impatto peggiore su umore>,
-  "brainHealthScore": <1-100, 100=impatto peggiore su cervello>,
-  "productivityScore": <1-100, 100=produttivita migliore>,
-  "advice": "<PARAGRAFO LUNGO E DETTAGLIATO (minimo 5-6 frasi): inizia con la situazione attuale, poi spiega gli effetti scientifici specifici sul cervello basati sulle categorie usate, poi descrivi le CONSEGUENZE A LUNGO TERMINE (cosa succedera' tra 1-5 anni se continua cosi'), infine dai 3-4 azioni CONCRETE E SPECIFICHE con orari e alternative precise. Deve essere un vero consulto medico personalizzato, non consigli generici.>",
-  "warnings": [{"severity": "<info|caution|warning|critical>", "title": "<titolo specifico alla categoria/app problematica>", "message": "<spiegazione scientifica dettagliata dell'effetto negativo ATTUALE + cosa succedera' A LUNGO TERMINE (1-5 anni) se non cambia>", "recommendation": "<3 azioni CONCRETE: 1) cosa fare ORA 2) cosa fare DOMANI 3) abitudine settimanale da adottare, con alternative specifiche per ogni attivita' problematica>"}]
+  "moodImpactScore": <1-100, 100=peggiore>,
+  "brainHealthScore": <1-100, 100=peggiore>,
+  "productivityScore": <1-100, 100=migliore>,
+  "diagnosis": "<analisi della situazione attuale con dato scientifico>",
+  "longTerm": "<conseguenze a 1-5 anni, specifiche e basate sui dati>",
+  "actions": ["<azione 1 specifica>", "<azione 2 specifica>", "<azione 3 specifica>"],
+  "weeklyHabit": "<abitudine graduale da costruire>",
+  "warnings": [{"severity": "info|caution|warning|critical", "title": "<app o categoria>", "problem": "<effetto negativo specifico>", "solution": "<cosa fare concretamente in alternativa>"}]
 }`;
 
     const userMessage = `Dati smartphone oggi:
@@ -1022,7 +1044,10 @@ function buildReport(usageData, wellness) {
     brainHealthScore: brainScore,
     productivityScore: prodScore,
     overallScore: overall,
-    advice: wellness.advice || '',
+    diagnosis: wellness.diagnosis || '',
+    longTerm: wellness.longTerm || '',
+    actions: wellness.actions || [],
+    weeklyHabit: wellness.weeklyHabit || '',
     warnings: wellness.warnings || [],
     goal: state.goal
   };
@@ -1034,11 +1059,37 @@ function displayResults(report) {
   document.getElementById('res-mood').textContent = (100 - report.moodImpactScore) + '/100';
   document.getElementById('res-brain').textContent = (100 - report.brainHealthScore) + '/100';
   document.getElementById('res-prod').textContent = report.productivityScore + '/100';
-  document.getElementById('res-advice').textContent = report.advice;
-
   // Color the wellness score
   const wc = scoreColor(report.overallScore);
   document.getElementById('res-wellness').style.color = wc;
+
+  // Diagnosis
+  document.getElementById('res-diagnosis').textContent = report.diagnosis || '';
+
+  // Long term consequences
+  const ltSection = document.getElementById('res-longterm-section');
+  if (report.longTerm) {
+    ltSection.style.display = 'block';
+    document.getElementById('res-longterm').textContent = report.longTerm;
+  } else {
+    ltSection.style.display = 'none';
+  }
+
+  // Actions
+  const actionsDiv = document.getElementById('res-actions');
+  if (report.actions && report.actions.length > 0) {
+    actionsDiv.innerHTML = report.actions.map((a, i) => `
+      <div style="display:flex; gap:10px; padding:10px; margin-bottom:6px; background:rgba(99,102,241,0.06); border-radius:10px; align-items:flex-start">
+        <span style="background:var(--indigo); color:white; min-width:24px; height:24px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700">${i+1}</span>
+        <span style="font-size:13px; color:var(--text2); line-height:1.5">${a}</span>
+      </div>
+    `).join('');
+  } else {
+    actionsDiv.innerHTML = '<div style="font-size:13px; color:var(--text3)">Nessuna azione suggerita</div>';
+  }
+
+  // Weekly habit
+  document.getElementById('res-habit').textContent = report.weeklyHabit || '';
 
   // Warnings
   const warnDiv = document.getElementById('res-warnings');
@@ -1048,8 +1099,8 @@ function displayResults(report) {
     warnDiv.innerHTML = report.warnings.map(w => `
       <div class="warning-card ${w.severity}">
         <div class="warning-title">${w.title}</div>
-        <div class="warning-msg">${w.message}</div>
-        <div class="warning-rec">💡 ${w.recommendation}</div>
+        <div class="warning-msg">${w.problem || w.message || ''}</div>
+        <div class="warning-rec">💡 ${w.solution || w.recommendation || ''}</div>
       </div>
     `).join('');
   } else {
@@ -1099,10 +1150,11 @@ function updateDashboard(report) {
     </div>`;
   }).join('');
 
-  // Advice
-  if (report.advice) {
+  // Advice (use diagnosis as dashboard summary)
+  const adviceSummary = report.diagnosis || report.advice || '';
+  if (adviceSummary) {
     document.getElementById('advice-card').style.display = 'block';
-    document.getElementById('advice-text').textContent = report.advice;
+    document.getElementById('advice-text').textContent = adviceSummary;
   }
 }
 
@@ -1266,7 +1318,22 @@ function showReportDetail(id) {
       </div>`).join('')}
     </div>`;
 
-  if (report.advice) {
+  if (report.diagnosis) {
+    html += `<div style="margin-bottom:16px"><h3 style="font-size:14px; margin-bottom:8px">🔬 Diagnosi</h3><p style="font-size:13px; color:var(--text2); line-height:1.6">${report.diagnosis}</p></div>`;
+  }
+  if (report.longTerm) {
+    html += `<div style="margin-bottom:16px"><h3 style="font-size:14px; margin-bottom:8px">⏳ Lungo termine</h3><p style="font-size:13px; color:var(--text2); line-height:1.6">${report.longTerm}</p></div>`;
+  }
+  if (report.actions && report.actions.length > 0) {
+    html += `<div style="margin-bottom:16px"><h3 style="font-size:14px; margin-bottom:8px">🎯 Azioni</h3>`;
+    html += report.actions.map((a, i) => `<div style="font-size:13px; color:var(--text2); padding:6px 0; border-bottom:1px solid rgba(255,255,255,0.04)">${i+1}. ${a}</div>`).join('');
+    html += `</div>`;
+  }
+  if (report.weeklyHabit) {
+    html += `<div style="margin-bottom:16px"><h3 style="font-size:14px; margin-bottom:8px">📅 Abitudine</h3><p style="font-size:13px; color:var(--text2); line-height:1.6">${report.weeklyHabit}</p></div>`;
+  }
+  // Backward compat with old reports
+  if (!report.diagnosis && report.advice) {
     html += `<div style="margin-bottom:16px"><h3 style="font-size:14px; margin-bottom:8px">💡 Consiglio AI</h3><p style="font-size:13px; color:var(--text2); line-height:1.6">${report.advice}</p></div>`;
   }
 
