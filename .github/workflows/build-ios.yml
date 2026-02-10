@@ -60,8 +60,19 @@ jobs:
 
       - name: Create IPA from archive
         run: |
+          echo "=== Archive contents ==="
+          find build/Terminus.xcarchive -name "*.app" -type d 2>/dev/null || true
+          find build/Terminus.xcarchive -maxdepth 4 -type d 2>/dev/null
+          echo "=== Building IPA ==="
           mkdir -p build/Payload
-          cp -r build/Terminus.xcarchive/Products/Applications/Terminus.app build/Payload/
+          # Find the .app wherever it is in the archive
+          APP_PATH=$(find build/Terminus.xcarchive -name "Terminus.app" -type d | head -1)
+          if [ -z "$APP_PATH" ]; then
+            echo "ERROR: Terminus.app not found in archive"
+            exit 1
+          fi
+          echo "Found app at: $APP_PATH"
+          cp -r "$APP_PATH" build/Payload/
           cd build
           zip -r Terminus.ipa Payload/
           echo "IPA size:"
