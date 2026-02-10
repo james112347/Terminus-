@@ -40,6 +40,28 @@
   --shadow-md: 0 4px 20px rgba(0,0,0,0.08);
   --shadow-lg: 0 8px 32px rgba(0,0,0,0.12);
 }
+body.dark {
+  --bg: #0d0d14;
+  --bg2: #1a1a28;
+  --bg3: #252538;
+  --card: #1a1a28;
+  --card-border: rgba(255,255,255,0.06);
+  --card-hover: #222236;
+  --text: #e8e8f0;
+  --text2: #9999b8;
+  --text3: #666680;
+  --accent: #8b7cf7;
+  --accent2: #b8b0ff;
+  --accent-light: rgba(139,124,247,0.12);
+  --shadow: 0 2px 12px rgba(0,0,0,0.25);
+  --shadow-md: 0 4px 20px rgba(0,0,0,0.35);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,0.5);
+}
+body.dark .header { background: rgba(13,13,20,0.85); }
+body.dark .tabbar { background: rgba(13,13,20,0.92); }
+body.dark .modal-overlay { background: rgba(0,0,0,0.6); }
+body.dark input[type="range"]::-webkit-slider-thumb { background: var(--accent); }
+
 * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif;
@@ -49,6 +71,7 @@ body {
   overflow-x: hidden;
   padding-top: var(--safe-top);
   -webkit-font-smoothing: antialiased;
+  transition: background 0.3s, color 0.3s;
 }
 ::-webkit-scrollbar { width: 0; }
 
@@ -111,6 +134,7 @@ body {
   margin-bottom: 12px;
   border: 1px solid var(--card-border);
   box-shadow: var(--shadow);
+  transition: background 0.3s, border-color 0.3s, box-shadow 0.3s;
 }
 .card-title {
   font-size: 12px; font-weight: 700;
@@ -342,6 +366,21 @@ body {
 .setting-row:last-child { border-bottom: none; }
 .setting-label { font-size: 14px; font-weight: 500; color: var(--text); }
 .setting-value { font-size: 15px; font-weight: 700; color: var(--accent); }
+.toggle-switch {
+  position: relative; width: 50px; height: 28px; cursor: pointer; flex-shrink: 0;
+}
+.toggle-switch input { opacity: 0; width: 0; height: 0; }
+.toggle-track {
+  position: absolute; inset: 0; background: var(--bg3);
+  border-radius: 14px; transition: background 0.3s;
+}
+.toggle-switch input:checked + .toggle-track { background: var(--accent); }
+.toggle-knob {
+  position: absolute; top: 3px; left: 3px; width: 22px; height: 22px;
+  background: white; border-radius: 50%; transition: transform 0.3s;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+}
+.toggle-switch input:checked ~ .toggle-knob { transform: translateX(22px); }
 
 /* Inputs */
 input[type="text"], input[type="password"], input[type="number"] {
@@ -1004,6 +1043,22 @@ input[type="range"]::-webkit-slider-thumb {
         </div>
       </div>
 
+
+      <!-- Dark Mode -->
+      <div class="card">
+        <div class="card-title">Aspetto</div>
+        <div class="setting-row" style="border-bottom:none">
+          <div>
+            <span class="setting-label">Modalita notte</span>
+            <div style="font-size:11px; color:var(--text3); margin-top:2px">Tema scuro per ridurre l'affaticamento visivo</div>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="darkmode-toggle" onchange="toggleDarkMode(this.checked)">
+            <div class="toggle-track"></div>
+            <div class="toggle-knob"></div>
+          </label>
+        </div>
+      </div>
 
       <!-- Info -->
       <div class="card">
@@ -2707,6 +2762,32 @@ function updateAIStatus() {
   }
 }
 
+// ============ DARK MODE ============
+function toggleDarkMode(on) {
+  document.body.classList.toggle('dark', on);
+  localStorage.setItem('terminus_darkmode', on ? '1' : '0');
+  // Update theme-color meta for status bar
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.content = on ? '#0d0d14' : '#f8f8fc';
+}
+
+function loadDarkMode() {
+  const saved = localStorage.getItem('terminus_darkmode');
+  // Auto-detect if no preference saved
+  let isDark = false;
+  if (saved !== null) {
+    isDark = saved === '1';
+  } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+    isDark = true;
+  }
+  if (isDark) {
+    document.body.classList.add('dark');
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.content = '#0d0d14';
+  }
+  document.getElementById('darkmode-toggle').checked = isDark;
+}
+
 // ============ INITIALIZATION ============
 // ============ LIVE ENERGY UPDATE ============
 // Aggiorna l'energia in tempo reale ogni 60 secondi basandosi sull'ora
@@ -2736,6 +2817,7 @@ function refreshDashboardEnergy() {
 }
 
 function init() {
+  loadDarkMode();
   Storage.load();
   const savedKey = Storage.loadKey();
   loadProfile();
