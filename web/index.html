@@ -549,6 +549,16 @@ input[type="range"]::-webkit-slider-thumb {
             <label style="font-size:11px; color:var(--text3); font-weight:600; text-transform:uppercase; letter-spacing:0.5px">Produttivit&agrave; (minuti)</label>
             <input id="manual-productivity" type="number" placeholder="es. 25" style="width:100%; padding:12px 14px; background:var(--bg3); border:1px solid var(--card-border); border-radius:10px; color:var(--text); font-size:15px; margin-top:6px; outline:none; transition:border-color 0.2s" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--card-border)'">
           </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px">
+            <div>
+              <label style="font-size:11px; color:var(--text3); font-weight:600; text-transform:uppercase; letter-spacing:0.5px">Sblocchi telefono</label>
+              <input id="manual-pickups" type="number" placeholder="es. 45" style="width:100%; padding:12px 14px; background:var(--bg3); border:1px solid var(--card-border); border-radius:10px; color:var(--text); font-size:15px; margin-top:6px; outline:none; transition:border-color 0.2s" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--card-border)'">
+            </div>
+            <div>
+              <label style="font-size:11px; color:var(--text3); font-weight:600; text-transform:uppercase; letter-spacing:0.5px">Notifiche ricevute</label>
+              <input id="manual-notifications" type="number" placeholder="es. 80" style="width:100%; padding:12px 14px; background:var(--bg3); border:1px solid var(--card-border); border-radius:10px; color:var(--text); font-size:15px; margin-top:6px; outline:none; transition:border-color 0.2s" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--card-border)'">
+            </div>
+          </div>
           <button class="btn btn-secondary" onclick="startManualAnalysis()" style="margin-top:4px">
             Analizza Dati Manuali
           </button>
@@ -597,6 +607,24 @@ input[type="range"]::-webkit-slider-thumb {
             <div class="stat-label">Produttivit&agrave;</div>
           </div>
         </div>
+      </div>
+
+      <!-- Energy Card in Results -->
+      <div class="card energy-card" id="res-energy-card">
+        <div class="energy-header">
+          <div>
+            <div class="card-title" style="margin-bottom:6px">Energia Residua</div>
+            <div style="display:flex; align-items:baseline; gap:8px">
+              <div class="energy-val" id="res-energy-val">--</div>
+              <div class="energy-label" id="res-energy-label">--</div>
+            </div>
+          </div>
+          <div style="font-size:11px; color:var(--text3); font-weight:500" id="res-energy-pct">--%</div>
+        </div>
+        <div class="energy-bar-track">
+          <div class="energy-bar-fill" id="res-energy-bar" style="width:0%"></div>
+        </div>
+        <div class="energy-factors" id="res-energy-factors"></div>
       </div>
 
       <!-- Diagnosis -->
@@ -1081,8 +1109,8 @@ async function startManualAnalysis() {
       ...(other > 0 ? [{ name: 'Altro', minutes: other, type: 'other' }] : [])
     ],
     apps: [],
-    pickups: 0,
-    notifications: 0
+    pickups: parseInt(document.getElementById('manual-pickups').value) || 0,
+    notifications: parseInt(document.getElementById('manual-notifications').value) || 0
   };
 
   state.isAnalyzing = true;
@@ -1144,10 +1172,43 @@ function displayResults(report) {
   document.getElementById('res-mood').textContent = (100 - report.moodImpactScore) + '/100';
   document.getElementById('res-brain').textContent = (100 - report.brainHealthScore) + '/100';
   document.getElementById('res-prod').textContent = report.productivityScore + '/100';
-  // Energy
+  // Energy stat card
   const energy = (report.energy != null && !isNaN(report.energy)) ? report.energy : calculateEnergy(report);
   document.getElementById('res-energy').textContent = energy + '%';
   document.getElementById('res-energy').style.color = energyColor(energy);
+
+  // Energy full card in results
+  try {
+    const eColor = energyColor(energy);
+    const startColor = energy > 50 ? '#26c281' : '#f0883e';
+    document.getElementById('res-energy-val').textContent = energy;
+    document.getElementById('res-energy-val').style.color = eColor;
+    document.getElementById('res-energy-label').textContent = energyLabel(energy);
+    document.getElementById('res-energy-label').style.color = eColor;
+    document.getElementById('res-energy-pct').textContent = energy + '%';
+    const resBar = document.getElementById('res-energy-bar');
+    resBar.style.width = energy + '%';
+    resBar.style.background = `linear-gradient(90deg, ${startColor}, ${eColor})`;
+
+    const totalMin = Number(report.totalMinutes) || 0;
+    const goalMin = Number(report.goal) || state.goal || 120;
+    const hours = totalMin / 60;
+    const dDrain = Math.round(Math.pow(hours, 1.4) * 8);
+    const drainW = { socialMedia:0.13, entertainment:0.10, gaming:0.09, news:0.08, other:0.06, communication:0.04, productivity:0.02, education:0.02, health:0.01, utilities:0.01 };
+    let qDrain = 0;
+    (report.categories||[]).forEach(c => { qDrain += (Number(c.minutes)||0) * (drainW[c.type]||0.06); });
+    qDrain = Math.round(qDrain);
+    const fDrain = Math.round(Math.min(15, (Number(report.pickups)||0)*0.12 + (Number(report.notifications)||0)*0.04));
+    let gDrain = 0;
+    if (totalMin > goalMin) gDrain = Math.round(Math.pow((totalMin-goalMin)/30, 1.3)*4);
+    document.getElementById('res-energy-factors').innerHTML = `
+      <div class="energy-factor"><div class="energy-factor-dot" style="background:#4a90d9"></div>Durata: -${dDrain}</div>
+      <div class="energy-factor"><div class="energy-factor-dot" style="background:#a855f7"></div>Contenuti: -${qDrain}</div>
+      <div class="energy-factor"><div class="energy-factor-dot" style="background:#f0883e"></div>Interruzioni: -${fDrain}</div>
+      <div class="energy-factor"><div class="energy-factor-dot" style="background:${totalMin > goalMin ? '#e74c6f' : '#26c281'}"></div>Obiettivo: ${totalMin > goalMin ? '-' + gDrain : '+bonus'}</div>
+    `;
+  } catch(e) {}
+
   // Color the wellness score
   const wc = scoreColor(report.overallScore);
   document.getElementById('res-wellness').style.color = wc;
