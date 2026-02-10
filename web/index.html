@@ -172,9 +172,8 @@ body {
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
 }
-.stat-card .stat-icon { font-size: 18px; margin-bottom: 8px; }
-.stat-card .stat-val { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; }
-.stat-card .stat-label { font-size: 10px; color: var(--text3); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
+.stat-card .stat-val { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; margin-top: 6px; }
+.stat-card .stat-label { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
 
 /* Category Row */
 .cat-row {
@@ -223,7 +222,6 @@ body {
   background: rgba(99,102,241,0.02);
 }
 .upload-area:active { border-color: var(--indigo); background: rgba(99,102,241,0.06); }
-.upload-area .upload-icon { font-size: 40px; margin-bottom: 10px; }
 .upload-area .upload-text { font-size: 14px; font-weight: 600; margin-bottom: 3px; }
 .upload-area .upload-sub { font-size: 11px; color: var(--text3); font-weight: 500; }
 
@@ -262,14 +260,7 @@ body {
 
 /* Results */
 .result-section { margin-bottom: 24px; }
-.result-section h3 {
-  font-size: 14px; font-weight: 700;
-  margin-bottom: 10px;
-  display: flex; align-items: center; gap: 8px;
-  letter-spacing: -0.2px;
-}
 .result-text { font-size: 13px; color: var(--text2); line-height: 1.7; font-weight: 400; }
-.result-divider { height: 1px; background: linear-gradient(90deg, transparent, var(--card-border), transparent); margin: 0 -22px; }
 
 /* Action items */
 .action-item {
@@ -298,7 +289,7 @@ body {
 .warning-card.critical { background: rgba(244,63,94,0.06); border-color: var(--red); }
 .warning-title { font-size: 13px; font-weight: 700; margin-bottom: 4px; letter-spacing: -0.1px; }
 .warning-msg { font-size: 12px; color: var(--text2); line-height: 1.6; }
-.warning-rec { font-size: 12px; color: var(--indigo2); margin-top: 8px; font-weight: 500; line-height: 1.5; }
+.warning-rec { font-size: 12px; color: var(--indigo2); margin-top: 8px; font-weight: 500; line-height: 1.5; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.04); }
 
 /* Habit card */
 .habit-card {
@@ -319,7 +310,6 @@ body {
   backdrop-filter: blur(10px);
 }
 .history-item:active { background: var(--card-hover); transform: scale(0.99); }
-.history-emoji { font-size: 28px; }
 .history-info { flex: 1; }
 .history-date { font-size: 13px; font-weight: 600; }
 .history-detail { font-size: 11px; color: var(--text3); font-weight: 500; margin-top: 1px; }
@@ -355,7 +345,6 @@ input[type="range"]::-webkit-slider-thumb {
 
 /* Empty state */
 .empty { text-align: center; padding: 60px 20px; }
-.empty-icon { font-size: 56px; margin-bottom: 16px; }
 .empty-text { font-size: 17px; color: var(--text); font-weight: 600; }
 .empty-sub { font-size: 13px; color: var(--text3); margin-top: 6px; line-height: 1.5; font-weight: 400; }
 
@@ -411,25 +400,6 @@ input[type="range"]::-webkit-slider-thumb {
   margin-bottom: 16px; font-size: 13px; color: var(--red); line-height: 1.6;
 }
 
-/* Ralph steps - keep for info modals */
-.ralph-step {
-  padding: 12px; margin-bottom: 8px;
-  background: rgba(99,102,241,0.05);
-  border-radius: 10px;
-}
-.ralph-phase { font-size: 12px; font-weight: 700; color: var(--indigo); margin-bottom: 4px; }
-.ralph-text { font-size: 12px; color: var(--text2); line-height: 1.5; }
-
-/* Method cards - keep for info */
-.method-card {
-  background: var(--card); border-radius: var(--radius-sm);
-  padding: 16px; margin-bottom: 10px;
-  border: 1px solid var(--card-border);
-  cursor: pointer; transition: background 0.2s;
-}
-.method-card:active { background: var(--bg3); }
-.method-card h4 { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
-.method-card p { font-size: 12px; color: var(--text2); }
 </style>
 </head>
 <body>
@@ -448,7 +418,9 @@ input[type="range"]::-webkit-slider-thumb {
   <!-- ===== DASHBOARD TAB ===== -->
   <div id="tab-dashboard" class="tab-content active">
     <div id="dashboard-empty" class="empty fade-up">
-      <div class="empty-icon">📊</div>
+      <div style="width:64px; height:64px; border-radius:20px; background:linear-gradient(135deg, var(--indigo), var(--purple)); display:flex; align-items:center; justify-content:center; margin:0 auto 20px; box-shadow:0 4px 24px var(--indigo-glow)">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+      </div>
       <div class="empty-text">Benvenuto in Terminus</div>
       <div class="empty-sub">Condividi uno screenshot del Tempo di Utilizzo<br>per la tua prima analisi AI</div>
       <div style="margin-top:24px">
@@ -481,24 +453,20 @@ input[type="range"]::-webkit-slider-thumb {
       <!-- Stats -->
       <div class="stats-row fade-up">
         <div class="stat-card">
-          <div class="stat-icon">📱</div>
-          <div class="stat-val" id="stat-time">--</div>
           <div class="stat-label">Tempo Schermo</div>
+          <div class="stat-val" id="stat-time">--</div>
         </div>
         <div class="stat-card">
-          <div class="stat-icon">🎯</div>
-          <div class="stat-val" id="stat-goal">--</div>
           <div class="stat-label">Obiettivo</div>
+          <div class="stat-val" id="stat-goal">--</div>
         </div>
         <div class="stat-card">
-          <div class="stat-icon">🧠</div>
-          <div class="stat-val" id="stat-brain">--</div>
           <div class="stat-label">Salute Cervello</div>
+          <div class="stat-val" id="stat-brain">--</div>
         </div>
         <div class="stat-card">
-          <div class="stat-icon">😊</div>
-          <div class="stat-val" id="stat-mood">--</div>
           <div class="stat-label">Impatto Umore</div>
+          <div class="stat-val" id="stat-mood">--</div>
         </div>
       </div>
 
@@ -510,7 +478,7 @@ input[type="range"]::-webkit-slider-thumb {
 
       <!-- AI Advice -->
       <div class="card fade-up" id="advice-card" style="display:none">
-        <div class="card-title" style="color:var(--indigo)">🔬 Diagnosi AI</div>
+        <div class="card-title" style="color:var(--indigo2)">Diagnosi AI</div>
         <div class="result-text" id="advice-text"></div>
       </div>
 
@@ -533,12 +501,12 @@ input[type="range"]::-webkit-slider-thumb {
 
         <div id="upload-zone" style="display:flex; gap:10px; margin-bottom:16px">
           <div class="upload-area" onclick="document.getElementById('file-input').click()" style="flex:1; padding:28px 12px; margin:0">
-            <div class="upload-icon">🖼️</div>
+            <div style="margin-bottom:10px"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--indigo2)" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></div>
             <div class="upload-text">Galleria</div>
             <div class="upload-sub">Scegli screenshot</div>
           </div>
           <div class="upload-area" onclick="document.getElementById('camera-input').click()" style="flex:1; padding:28px 12px; margin:0">
-            <div class="upload-icon">📸</div>
+            <div style="margin-bottom:10px"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--indigo2)" stroke-width="1.8"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg></div>
             <div class="upload-text">Fotocamera</div>
             <div class="upload-sub">Scatta foto</div>
           </div>
@@ -631,7 +599,7 @@ input[type="range"]::-webkit-slider-thumb {
       <!-- Diagnosis -->
       <div class="card">
         <div class="result-section" style="margin-bottom:0">
-          <h3>🔬 Diagnosi</h3>
+          <div class="card-title" style="color:var(--indigo2)">Diagnosi</div>
           <div class="result-text" id="res-diagnosis"></div>
         </div>
       </div>
@@ -639,7 +607,7 @@ input[type="range"]::-webkit-slider-thumb {
       <!-- Long Term -->
       <div class="card" id="res-longterm-section">
         <div class="result-section" style="margin-bottom:0">
-          <h3>⏳ Conseguenze a lungo termine</h3>
+          <div class="card-title" style="color:var(--orange)">Proiezione a lungo termine</div>
           <div class="result-text" id="res-longterm"></div>
         </div>
       </div>
@@ -647,24 +615,24 @@ input[type="range"]::-webkit-slider-thumb {
       <!-- Actions -->
       <div class="card">
         <div class="result-section" style="margin-bottom:0">
-          <h3>🎯 Cosa fare oggi</h3>
+          <div class="card-title" style="color:var(--green)">Piano d'azione</div>
           <div id="res-actions"></div>
         </div>
       </div>
 
       <!-- Weekly Habit -->
-      <div class="card" style="background:linear-gradient(135deg, rgba(99,102,241,0.08), rgba(168,85,247,0.06)); border-color:rgba(99,102,241,0.15)">
+      <div class="card" style="background:linear-gradient(135deg, rgba(99,102,241,0.06), rgba(168,85,247,0.04)); border-color:rgba(99,102,241,0.12)">
         <div class="result-section" style="margin-bottom:0">
-          <h3>📅 Abitudine della settimana</h3>
+          <div class="card-title" style="color:var(--purple)">Obiettivo settimanale</div>
           <div class="result-text" id="res-habit" style="color:var(--text)"></div>
         </div>
       </div>
 
       <!-- Warnings -->
       <div id="res-warnings-section" style="display:none">
-        <div class="card">
+        <div class="card" style="border-color:rgba(244,63,94,0.12)">
           <div class="result-section" style="margin-bottom:0">
-            <h3>⚠️ Avvisi</h3>
+            <div class="card-title" style="color:var(--red)">Avvisi</div>
             <div id="res-warnings"></div>
           </div>
         </div>
@@ -680,7 +648,9 @@ input[type="range"]::-webkit-slider-thumb {
   <!-- ===== HISTORY TAB ===== -->
   <div id="tab-history" class="tab-content">
     <div id="history-empty" class="empty fade-up">
-      <div class="empty-icon">📋</div>
+      <div style="width:52px; height:52px; border-radius:14px; background:var(--bg3); display:flex; align-items:center; justify-content:center; margin:0 auto 16px">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" stroke-width="1.8"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+      </div>
       <div class="empty-text">Nessun report</div>
       <div class="empty-sub">I tuoi report appariranno qui dopo la prima analisi</div>
     </div>
@@ -700,7 +670,7 @@ input[type="range"]::-webkit-slider-thumb {
           style="width:100%; padding:14px; background:var(--bg3); border:1px solid var(--card-border); border-radius:12px; color:var(--text); font-size:14px; font-family:'SF Mono',monospace; outline:none; transition:border-color 0.2s" onfocus="this.style.borderColor='var(--indigo)'" onblur="this.style.borderColor='var(--card-border)'">
         <div style="display:flex; gap:8px; margin-top:12px">
           <button class="btn btn-primary" onclick="saveApiKey()" style="flex:1; padding:13px; font-size:14px">Salva</button>
-          <button class="btn btn-secondary" onclick="toggleKeyVisibility()" style="width:52px; padding:13px; font-size:14px">👁</button>
+          <button class="btn btn-secondary" onclick="toggleKeyVisibility()" style="width:52px; padding:13px; font-size:14px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
         </div>
         <div id="apikey-status" style="font-size:12px; margin-top:8px; display:none"></div>
       </div>
@@ -771,7 +741,7 @@ input[type="range"]::-webkit-slider-thumb {
 <div class="modal-overlay" id="setup-modal" style="align-items:center; justify-content:center; padding:20px">
   <div style="background:var(--bg2); border-radius:24px; padding:36px 28px; max-width:380px; width:100%; text-align:center; box-shadow:var(--shadow-lg); border:1px solid var(--card-border)">
     <div style="width:56px; height:56px; border-radius:16px; background:linear-gradient(135deg,var(--indigo),var(--purple)); display:flex; align-items:center; justify-content:center; margin:0 auto 20px; box-shadow:0 4px 20px var(--indigo-glow)">
-      <span style="font-size:26px">🔑</span>
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 11-7.778 7.778 5.5 5.5 0 017.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
     </div>
     <h2 style="font-size:22px; margin-bottom:6px; font-weight:800; letter-spacing:-0.3px">Benvenuto in Terminus</h2>
     <p style="font-size:13px; color:var(--text3); margin-bottom:24px; line-height:1.6">
@@ -784,15 +754,6 @@ input[type="range"]::-webkit-slider-thumb {
       Inizia
     </button>
     <div id="setup-error" style="font-size:12px; color:var(--red); display:none; margin-top:8px"></div>
-  </div>
-</div>
-
-<!-- Method Modal -->
-<div class="modal-overlay" id="method-modal">
-  <div class="modal">
-    <div class="modal-handle"></div>
-    <button class="modal-close" onclick="closeModal()">&times;</button>
-    <div id="modal-content"></div>
   </div>
 </div>
 
@@ -1217,7 +1178,7 @@ function displayResults(report) {
       <div class="warning-card ${w.severity}">
         <div class="warning-title">${w.title}</div>
         <div class="warning-msg">${w.problem || w.message || ''}</div>
-        <div class="warning-rec">💡 ${w.solution || w.recommendation || ''}</div>
+        <div class="warning-rec">${w.solution || w.recommendation || ''}</div>
       </div>
     `).join('');
   } else {
@@ -1258,7 +1219,7 @@ function updateDashboard(report) {
     const pct = Math.round(c.minutes / report.totalMinutes * 100);
     const barPct = Math.round(c.minutes / maxMin * 100);
     return `<div class="cat-row">
-      <div class="cat-icon" style="background:${color}">${catEmoji(c.type)}</div>
+      <div class="cat-icon" style="background:${color}; font-size:12px; font-weight:700">${catInitial(c.type)}</div>
       <div class="cat-info">
         <div class="cat-name">${c.name}</div>
         <div class="cat-time">${c.minutes} min (${pct}%)</div>
@@ -1289,15 +1250,16 @@ function updateHistory() {
   list.innerHTML = state.history.map(r => {
     const d = new Date(r.date);
     const dateStr = d.toLocaleDateString('it-IT', { day: 'numeric', month: 'short', year: 'numeric' });
-    const emoji = r.overallScore >= 80 ? '🌟' : r.overallScore >= 60 ? '😊' : r.overallScore >= 40 ? '😐' : r.overallScore >= 20 ? '😟' : '🚨';
     const color = scoreColor(r.overallScore);
     return `<div class="history-item" onclick="showReportDetail(${r.id})">
-      <div class="history-emoji">${emoji}</div>
+      <div style="width:40px; height:40px; border-radius:12px; background:var(--bg3); display:flex; align-items:center; justify-content:center; flex-shrink:0">
+        <div style="width:12px; height:12px; border-radius:50%; background:${color}; box-shadow:0 0 8px ${color}"></div>
+      </div>
       <div class="history-info">
         <div class="history-date">${dateStr}</div>
-        <div class="history-detail">Schermo: ${formatMin(r.totalMinutes)} | Cat: ${r.categories.length}</div>
+        <div class="history-detail">${formatMin(r.totalMinutes)} &middot; ${r.categories.length} categorie</div>
       </div>
-      <div class="history-score" style="color:${color}">${r.overallScore}</div>
+      <div class="history-score" style="color:${color}">${r.overallScore}<span style="font-size:11px; font-weight:500; color:var(--text3)">/100</span></div>
     </div>`;
   }).join('');
 }
@@ -1333,13 +1295,13 @@ function catColor(type) {
   return colors[type] || '#666';
 }
 
-function catEmoji(type) {
-  const emojis = {
-    socialMedia: '👥', entertainment: '🎬', gaming: '🎮',
-    communication: '💬', productivity: '💼', education: '📚',
-    news: '📰', health: '❤️', utilities: '🔧', other: '📱'
+function catInitial(type) {
+  const initials = {
+    socialMedia: 'S', entertainment: 'E', gaming: 'G',
+    communication: 'C', productivity: 'P', education: 'Ed',
+    news: 'N', health: 'H', utilities: 'U', other: 'A'
   };
-  return emojis[type] || '📱';
+  return initials[type] || 'A';
 }
 
 // ============ UI NAVIGATION ============
@@ -1366,7 +1328,7 @@ function resetAnalysis() {
 
 function showError(msg) {
   const errDiv = document.getElementById('analyze-error');
-  errDiv.innerHTML = `<div class="error-msg">⚠️ ${msg}</div>
+  errDiv.innerHTML = `<div class="error-msg">${msg}</div>
     <button class="btn btn-secondary" onclick="resetAnalysis()">Riprova</button>`;
   showSection('analyze-error');
   errDiv.style.display = 'block';
@@ -1383,36 +1345,6 @@ function updateGoal(val) {
 }
 
 // ============ MODALS ============
-function showMethodModal(type) {
-  const content = {
-    gsd: `<h2>📋 Metodo GSD</h2>
-      <p style="color:var(--text2); margin-bottom:16px">Il metodo GSD (Getting Stuff Done) guida il monitoraggio del tuo benessere digitale.</p>
-      <div class="ralph-step"><div class="ralph-phase">1. Capture</div><div class="ralph-text">Raccogliamo tutti i dati di utilizzo delle app dal tuo dispositivo.</div></div>
-      <div class="ralph-step"><div class="ralph-phase">2. Clarify</div><div class="ralph-text">Analizziamo e categorizziamo i dati per identificare pattern.</div></div>
-      <div class="ralph-step"><div class="ralph-phase">3. Organize</div><div class="ralph-text">Organizziamo le informazioni in report strutturati con l'aiuto dell'AI.</div></div>
-      <div class="ralph-step"><div class="ralph-phase">4. Reflect</div><div class="ralph-text">Riflettiamo sugli effetti del tempo schermo su umore e cervello.</div></div>
-      <div class="ralph-step"><div class="ralph-phase">5. Engage</div><div class="ralph-text">Agiamo con consigli concreti e limiti personalizzati.</div></div>`,
-    ralph: `<h2>🔄 Ralph Loop</h2>
-      <p style="color:var(--text2); margin-bottom:16px">Ciclo di miglioramento continuo per abitudini digitali più sane.</p>
-      <div class="ralph-step"><div class="ralph-phase">Review</div><div class="ralph-text">Revisione quotidiana del tempo schermo e delle abitudini.</div></div>
-      <div class="ralph-step"><div class="ralph-phase">Analyze</div><div class="ralph-text">Analisi approfondita dell'impatto su salute mentale e produttività.</div></div>
-      <div class="ralph-step"><div class="ralph-phase">Learn</div><div class="ralph-text">Apprendimento dai pattern e ricerche neuroscientifiche.</div></div>
-      <div class="ralph-step"><div class="ralph-phase">Plan</div><div class="ralph-text">Pianificazione di azioni concrete per migliorare.</div></div>
-      <div class="ralph-step"><div class="ralph-phase">Habituate</div><div class="ralph-text">Costruzione graduale di abitudini positive e sostenibili.</div></div>`,
-    bmad: `<h2>🏛️ BMAD Framework</h2>
-      <p style="color:var(--text2); margin-bottom:16px">Framework architetturale alla base di Terminus.</p>
-      <div class="ralph-step"><div class="ralph-phase">Build</div><div class="ralph-text">Costruiamo strumenti di monitoraggio e analisi del tempo schermo.</div></div>
-      <div class="ralph-step"><div class="ralph-phase">Measure</div><div class="ralph-text">Misuriamo l'impatto reale dell'utilizzo su umore, sonno e produttività.</div></div>
-      <div class="ralph-step"><div class="ralph-phase">Analyze</div><div class="ralph-text">Analizziamo i dati con AI per generare insight personalizzati.</div></div>
-      <div class="ralph-step"><div class="ralph-phase">Decide</div><div class="ralph-text">Ti aiutiamo a prendere decisioni informate sul tuo uso dello smartphone.</div></div>`
-  };
-  document.getElementById('modal-content').innerHTML = content[type];
-  document.getElementById('method-modal').classList.add('show');
-}
-
-function closeModal() {
-  document.getElementById('method-modal').classList.remove('show');
-}
 
 function showReportDetail(id) {
   const report = state.history.find(r => r.id === id);
@@ -1420,38 +1352,36 @@ function showReportDetail(id) {
 
   const d = new Date(report.date);
   const dateStr = d.toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-  const emoji = report.overallScore >= 80 ? '🌟' : report.overallScore >= 60 ? '😊' : report.overallScore >= 40 ? '😐' : '😟';
-
   let html = `
-    <h2 style="font-weight:800; letter-spacing:-0.3px">${emoji} Report ${dateStr}</h2>
+    <h2 style="font-weight:800; letter-spacing:-0.3px">Report ${dateStr}</h2>
     <div class="stats-row" style="margin:16px 0">
-      <div class="stat-card"><div class="stat-val" style="color:${scoreColor(report.overallScore)}">${report.overallScore}</div><div class="stat-label">Benessere</div></div>
-      <div class="stat-card"><div class="stat-val">${formatMin(report.totalMinutes)}</div><div class="stat-label">Tempo Schermo</div></div>
+      <div class="stat-card"><div class="stat-label">Benessere</div><div class="stat-val" style="color:${scoreColor(report.overallScore)}">${report.overallScore}</div></div>
+      <div class="stat-card"><div class="stat-label">Tempo Schermo</div><div class="stat-val">${formatMin(report.totalMinutes)}</div></div>
     </div>
     <div style="margin-bottom:20px">
-      <h3 style="font-size:14px; font-weight:700; margin-bottom:10px">Categorie</h3>
-      ${report.categories.map(c => `<div style="display:flex; justify-content:space-between; padding:8px 0; font-size:13px; border-bottom:1px solid rgba(255,255,255,0.03)">
-        <span style="font-weight:500">${catEmoji(c.type)} ${c.name}</span><span style="color:var(--text3); font-weight:500">${c.minutes} min</span>
+      <div style="font-size:11px; font-weight:700; color:var(--text3); text-transform:uppercase; letter-spacing:1px; margin-bottom:10px">Categorie</div>
+      ${report.categories.map(c => `<div style="display:flex; justify-content:space-between; align-items:center; padding:10px 0; font-size:13px; border-bottom:1px solid rgba(255,255,255,0.03)">
+        <span style="display:flex; align-items:center; gap:10px; font-weight:500"><span style="width:28px; height:28px; border-radius:8px; background:${catColor(c.type)}; display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:700; color:white">${catInitial(c.type)}</span>${c.name}</span><span style="color:var(--text3); font-weight:600; font-size:12px">${c.minutes} min</span>
       </div>`).join('')}
     </div>`;
 
   if (report.diagnosis) {
-    html += `<div style="margin-bottom:20px"><h3 style="font-size:14px; font-weight:700; margin-bottom:8px">🔬 Diagnosi</h3><p style="font-size:13px; color:var(--text2); line-height:1.7">${report.diagnosis}</p></div>`;
+    html += `<div style="margin-bottom:20px"><div style="font-size:11px; font-weight:700; color:var(--indigo2); text-transform:uppercase; letter-spacing:1px; margin-bottom:8px">Diagnosi</div><p style="font-size:13px; color:var(--text2); line-height:1.7">${report.diagnosis}</p></div>`;
   }
   if (report.longTerm) {
-    html += `<div style="margin-bottom:20px"><h3 style="font-size:14px; font-weight:700; margin-bottom:8px">⏳ Lungo termine</h3><p style="font-size:13px; color:var(--text2); line-height:1.7">${report.longTerm}</p></div>`;
+    html += `<div style="margin-bottom:20px"><div style="font-size:11px; font-weight:700; color:var(--orange); text-transform:uppercase; letter-spacing:1px; margin-bottom:8px">Proiezione a lungo termine</div><p style="font-size:13px; color:var(--text2); line-height:1.7">${report.longTerm}</p></div>`;
   }
   if (report.actions && report.actions.length > 0) {
-    html += `<div style="margin-bottom:20px"><h3 style="font-size:14px; font-weight:700; margin-bottom:10px">🎯 Azioni</h3>`;
+    html += `<div style="margin-bottom:20px"><div style="font-size:11px; font-weight:700; color:var(--green); text-transform:uppercase; letter-spacing:1px; margin-bottom:10px">Piano d'azione</div>`;
     html += report.actions.map((a, i) => `<div class="action-item"><span class="action-num">${i+1}</span><span class="action-text">${a}</span></div>`).join('');
     html += `</div>`;
   }
   if (report.weeklyHabit) {
-    html += `<div class="habit-card" style="margin-bottom:16px"><h3 style="font-size:14px; font-weight:700; margin-bottom:8px">📅 Abitudine</h3><p style="font-size:13px; color:var(--text); line-height:1.7">${report.weeklyHabit}</p></div>`;
+    html += `<div class="habit-card" style="margin-bottom:16px"><div style="font-size:11px; font-weight:700; color:var(--purple); text-transform:uppercase; letter-spacing:1px; margin-bottom:8px">Obiettivo settimanale</div><p style="font-size:13px; color:var(--text); line-height:1.7">${report.weeklyHabit}</p></div>`;
   }
   // Backward compat with old reports
   if (!report.diagnosis && report.advice) {
-    html += `<div style="margin-bottom:16px"><h3 style="font-size:14px; font-weight:700; margin-bottom:8px">💡 Consiglio AI</h3><p style="font-size:13px; color:var(--text2); line-height:1.7">${report.advice}</p></div>`;
+    html += `<div style="margin-bottom:16px"><div style="font-size:11px; font-weight:700; color:var(--text3); text-transform:uppercase; letter-spacing:1px; margin-bottom:8px">Consiglio AI</div><p style="font-size:13px; color:var(--text2); line-height:1.7">${report.advice}</p></div>`;
   }
 
 
@@ -1546,9 +1476,6 @@ function init() {
   updateHistory();
 
   // Close modals on overlay click
-  document.getElementById('method-modal').addEventListener('click', function(e) {
-    if (e.target === this) closeModal();
-  });
   document.getElementById('detail-modal').addEventListener('click', function(e) {
     if (e.target === this) closeDetailModal();
   });
