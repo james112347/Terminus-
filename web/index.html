@@ -1868,7 +1868,8 @@ function updateDashboard(report) {
 
   // Energy card
   try {
-    const energy = (report.energy != null && !isNaN(report.energy)) ? report.energy : calculateEnergy(report);
+    // Sempre ricalcolare l'energia (i fattori tempo/lavoro cambiano in tempo reale)
+    const energy = calculateEnergy(report);
     const eColor = energyColor(energy);
     const startColor = energy > 50 ? '#26c281' : '#f0883e';
     document.getElementById('energy-val').textContent = energy;
@@ -2096,41 +2097,42 @@ function calculateEnergy(report) {
     const ew = getEffectiveWork();
     if (ew) {
       const hoursSinceWork = curExact - ew.end;
-      // Durante il lavoro: fatica graduale. Dopo: recupero esponenziale.
-      const workIntensity = { 'fisico': 14, 'misto': 16, 'mentale': 10, 'leggero': 4 };
-      const baseWork = workIntensity[ew.type] || 8;
-      const longShiftBonus = ew.hours > 9 ? Math.min(6, (ew.hours - 9) * 2) : 0;
+      // Intensita base: proporzionale al tipo di lavoro
+      const workIntensity = { 'fisico': 10, 'misto': 12, 'mentale': 8, 'leggero': 3 };
+      const baseWork = workIntensity[ew.type] || 6;
+      // Turni lunghi: bonus moderato
+      const longShiftBonus = ew.hours > 9 ? Math.min(4, (ew.hours - 9) * 1.2) : 0;
 
       if (curExact >= ew.start && curExact <= ew.end) {
         // DURANTE il turno: fatica che cresce progressivamente
         const hoursWorked = curExact - ew.start;
-        const progress = hoursWorked / Math.max(1, ew.hours); // 0→1
-        workFatigue = (baseWork + longShiftBonus) * progress * 0.8;
+        const progress = hoursWorked / Math.max(1, ew.hours);
+        workFatigue = (baseWork + longShiftBonus) * progress * 0.7;
       } else if (hoursSinceWork >= 0 && hoursSinceWork < 8) {
         // DOPO il turno: picco fatica poi recupero esponenziale
-        const recoveryFactor = Math.exp(-hoursSinceWork * 0.35);
+        const recoveryFactor = Math.exp(-hoursSinceWork * 0.4);
         workFatigue = (baseWork + longShiftBonus) * recoveryFactor;
       }
     }
 
     // 12. PROGRESSIONE TEMPORALE → l'energia cala naturalmente durante il giorno
-    // Modello: il cervello consuma ~20% dell'energia totale, la fatica si accumula
-    // linearmente dalle ore sveglio. Picco negativo la sera, recupero con sonno.
+    // Curva piu dolce: il drain temporale e leggero, non deve dominare
     const wakeH = prof.wakeTime || 7;
     let hoursAwake = curExact - wakeH;
     if (hoursAwake < 0) hoursAwake += 24;
-    // Curva: 0 a sveglia, cresce linearmente con un ginocchio dopo 12h
     let timeDrain = 0;
-    if (hoursAwake <= 4) timeDrain = hoursAwake * 0.5;        // mattina: -0.5/h
-    else if (hoursAwake <= 8) timeDrain = 2 + (hoursAwake - 4) * 1.0;  // pomeriggio: -1/h
-    else if (hoursAwake <= 12) timeDrain = 6 + (hoursAwake - 8) * 1.8; // sera: -1.8/h
-    else if (hoursAwake <= 16) timeDrain = 13.2 + (hoursAwake - 12) * 2.5; // notte: -2.5/h
-    else timeDrain = 23.2 + (hoursAwake - 16) * 3; // esaurimento
+    if (hoursAwake <= 6) timeDrain = hoursAwake * 0.3;          // mattina: -0.3/h
+    else if (hoursAwake <= 10) timeDrain = 1.8 + (hoursAwake - 6) * 0.7; // pomeriggio: -0.7/h
+    else if (hoursAwake <= 14) timeDrain = 4.6 + (hoursAwake - 10) * 1.2; // sera: -1.2/h
+    else if (hoursAwake <= 18) timeDrain = 9.4 + (hoursAwake - 14) * 1.8; // notte: -1.8/h
+    else timeDrain = 16.6 + (hoursAwake - 18) * 2.5;
 
     // Calcolo finale
+    // Stress e circadiano amplificano solo i drain da schermo, NON quelli biologici
     const startEnergy = Math.min(100, baseline + activityBonus + hydrationBonus);
-    const totalDrain = (durationDrain + contentDrain + fragmentDrain + goalDrain + bedtimePenalty + workFatigue + timeDrain) * stressMultiplier * circadianMult;
-    const energy = startEnergy - totalDrain;
+    const screenDrain = (durationDrain + contentDrain + fragmentDrain + goalDrain) * stressMultiplier * circadianMult;
+    const bioDrain = bedtimePenalty + workFatigue + timeDrain;
+    const energy = startEnergy - screenDrain - bioDrain;
 
     const result = Math.round(Math.max(0, Math.min(100, energy)));
     return isNaN(result) ? 50 : result;
@@ -2190,34 +2192,34 @@ function getEnergyBreakdown(report) {
     const now = new Date();
     const curExact = now.getHours() + now.getMinutes() / 60;
     const hoursSinceWork = curExact - ew.end;
-    const workIntensity = { 'fisico': 14, 'misto': 16, 'mentale': 10, 'leggero': 4 };
-    const baseWork = workIntensity[ew.type] || 8;
-    const longShiftBonus = ew.hours > 9 ? Math.min(6, (ew.hours - 9) * 2) : 0;
+    const workIntensity = { 'fisico': 10, 'misto': 12, 'mentale': 8, 'leggero': 3 };
+    const baseWork = workIntensity[ew.type] || 6;
+    const longShiftBonus = ew.hours > 9 ? Math.min(4, (ew.hours - 9) * 1.2) : 0;
     const wtLabels = { 'fisico': 'Fisico', 'misto': 'Fis+Ment', 'mentale': 'Mentale', 'leggero': 'Leggero' };
 
     if (curExact >= ew.start && curExact <= ew.end) {
       const hoursWorked = curExact - ew.start;
       const progress = hoursWorked / Math.max(1, ew.hours);
-      wDrain = Math.round((baseWork + longShiftBonus) * progress * 0.8);
+      wDrain = Math.round((baseWork + longShiftBonus) * progress * 0.7);
       workLabel = (wtLabels[ew.type] || 'Lavoro') + ' (in corso)';
     } else if (hoursSinceWork >= 0 && hoursSinceWork < 8) {
-      const recoveryFactor = Math.exp(-hoursSinceWork * 0.35);
+      const recoveryFactor = Math.exp(-hoursSinceWork * 0.4);
       wDrain = Math.round((baseWork + longShiftBonus) * recoveryFactor);
       workLabel = (wtLabels[ew.type] || 'Lavoro') + ' ' + Math.round(ew.hours) + 'h';
     }
   }
 
-  // Time progression breakdown
+  // Time progression breakdown (curva dolce)
   const wakeH = prof.wakeTime || 7;
   const nowH = new Date().getHours() + new Date().getMinutes() / 60;
   let hoursAwake = nowH - wakeH;
   if (hoursAwake < 0) hoursAwake += 24;
   let tDrain = 0;
-  if (hoursAwake <= 4) tDrain = Math.round(hoursAwake * 0.5);
-  else if (hoursAwake <= 8) tDrain = Math.round(2 + (hoursAwake - 4) * 1.0);
-  else if (hoursAwake <= 12) tDrain = Math.round(6 + (hoursAwake - 8) * 1.8);
-  else if (hoursAwake <= 16) tDrain = Math.round(13.2 + (hoursAwake - 12) * 2.5);
-  else tDrain = Math.round(23.2 + (hoursAwake - 16) * 3);
+  if (hoursAwake <= 6) tDrain = Math.round(hoursAwake * 0.3);
+  else if (hoursAwake <= 10) tDrain = Math.round(1.8 + (hoursAwake - 6) * 0.7);
+  else if (hoursAwake <= 14) tDrain = Math.round(4.6 + (hoursAwake - 10) * 1.2);
+  else if (hoursAwake <= 18) tDrain = Math.round(9.4 + (hoursAwake - 14) * 1.8);
+  else tDrain = Math.round(16.6 + (hoursAwake - 18) * 2.5);
   const awakeLabel = Math.round(hoursAwake) + 'h sveglio';
 
   return { startE, baseline, actBonus, hydBonus, hydLabel, dDrain, cDrain, fDrain, gDrain, bDrain, bedLabel, hoursUntilBed, stressL, stressM, sleep, totalMin, goalMin, wDrain, workLabel, tDrain, awakeLabel };
@@ -2242,7 +2244,7 @@ function buildEnergyFactorsHTML(report) {
 
 function buildEnergyAnalysis(report) {
   const b = getEnergyBreakdown(report);
-  const energy = (report.energy != null) ? report.energy : calculateEnergy(report);
+  const energy = calculateEnergy(report);
   const ctx = report.context || state.context || {};
   const hoursLeft = Number(ctx.hoursUntilBed) || null;
   const sleep = b.sleep;
