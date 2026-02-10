@@ -1,0 +1,1282 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Terminus">
+<meta name="theme-color" content="#0a0a1a">
+<title>Terminus - Benessere Digitale</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%234f46e5'/><text x='50' y='68' text-anchor='middle' fill='white' font-size='50' font-family='system-ui'>T</text></svg>">
+<style>
+:root {
+  --bg: #0a0a1a;
+  --bg2: #141428;
+  --bg3: #1e1e3a;
+  --card: #1a1a2e;
+  --card-border: rgba(99, 102, 241, 0.15);
+  --text: #f0f0ff;
+  --text2: #9898b8;
+  --text3: #585878;
+  --indigo: #6366f1;
+  --indigo2: #818cf8;
+  --purple: #a855f7;
+  --red: #ef4444;
+  --orange: #f97316;
+  --yellow: #eab308;
+  --green: #22c55e;
+  --teal: #14b8a6;
+  --pink: #ec4899;
+  --blue: #3b82f6;
+  --radius: 16px;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-top: env(safe-area-inset-top, 0px);
+}
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100dvh;
+  overflow-x: hidden;
+  padding-top: var(--safe-top);
+}
+/* Scrollbar */
+::-webkit-scrollbar { width: 0; }
+
+/* Header */
+.header {
+  position: sticky; top: 0; z-index: 100;
+  background: rgba(10,10,26,0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  padding: 12px 20px;
+  padding-top: calc(var(--safe-top) + 12px);
+  border-bottom: 1px solid var(--card-border);
+  text-align: center;
+}
+.header h1 { font-size: 18px; font-weight: 700; letter-spacing: 0.5px; }
+.header h1 span { color: var(--indigo); }
+
+/* Main Content */
+.main {
+  padding: 16px;
+  padding-bottom: calc(80px + var(--safe-bottom) + 16px);
+  max-width: 500px;
+  margin: 0 auto;
+}
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+/* Tab Bar */
+.tabbar {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  background: rgba(10,10,26,0.9);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-top: 1px solid var(--card-border);
+  display: flex;
+  padding-bottom: var(--safe-bottom);
+  z-index: 100;
+}
+.tab-btn {
+  flex: 1; display: flex; flex-direction: column; align-items: center;
+  padding: 8px 4px; gap: 3px;
+  background: none; border: none; color: var(--text3);
+  font-size: 10px; font-weight: 500;
+  cursor: pointer; transition: color 0.2s;
+}
+.tab-btn.active { color: var(--indigo); }
+.tab-btn svg { width: 24px; height: 24px; }
+
+/* Cards */
+.card {
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 20px;
+  margin-bottom: 16px;
+  border: 1px solid var(--card-border);
+}
+.card-title {
+  font-size: 14px; font-weight: 600;
+  color: var(--text2); margin-bottom: 12px;
+  text-transform: uppercase; letter-spacing: 0.5px;
+}
+
+/* Score Circle */
+.score-wrap { text-align: center; padding: 10px 0; }
+.score-circle {
+  position: relative; width: 160px; height: 160px;
+  margin: 0 auto 12px;
+}
+.score-circle svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.score-circle .bg { fill: none; stroke: var(--bg3); stroke-width: 10; }
+.score-circle .fg {
+  fill: none; stroke-width: 10; stroke-linecap: round;
+  transition: stroke-dashoffset 1s ease, stroke 0.5s;
+}
+.score-value {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+  text-align: center;
+}
+.score-value .num { font-size: 46px; font-weight: 800; line-height: 1; }
+.score-value .label { font-size: 13px; color: var(--text2); }
+.score-msg { font-size: 14px; color: var(--text2); text-align:center; }
+
+/* Stats Row */
+.stats-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+.stat-card {
+  background: var(--card); border-radius: 12px;
+  padding: 14px; border: 1px solid var(--card-border);
+}
+.stat-card .stat-icon { font-size: 20px; margin-bottom: 6px; }
+.stat-card .stat-val { font-size: 22px; font-weight: 700; }
+.stat-card .stat-label { font-size: 11px; color: var(--text2); margin-top: 2px; }
+
+/* Category Row */
+.cat-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.cat-row:last-child { border-bottom: none; }
+.cat-icon {
+  width: 32px; height: 32px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; color: white; flex-shrink: 0;
+}
+.cat-info { flex: 1; }
+.cat-name { font-size: 14px; font-weight: 500; }
+.cat-time { font-size: 12px; color: var(--text2); }
+.cat-bar { width: 80px; height: 6px; background: var(--bg3); border-radius: 3px; overflow: hidden; }
+.cat-bar-fill { height: 100%; border-radius: 3px; transition: width 0.8s ease; }
+
+/* Buttons */
+.btn {
+  width: 100%; padding: 16px; border: none; border-radius: 14px;
+  font-size: 16px; font-weight: 600; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  transition: transform 0.1s, opacity 0.2s;
+  color: white;
+}
+.btn:active { transform: scale(0.97); }
+.btn-primary { background: linear-gradient(135deg, var(--indigo), var(--purple)); }
+.btn-secondary { background: var(--bg3); }
+.btn:disabled { opacity: 0.5; pointer-events: none; }
+
+/* Upload Area */
+.upload-area {
+  border: 2px dashed var(--card-border);
+  border-radius: var(--radius);
+  padding: 40px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.3s, background 0.3s;
+  margin-bottom: 16px;
+}
+.upload-area:active { border-color: var(--indigo); background: rgba(99,102,241,0.05); }
+.upload-area .upload-icon { font-size: 48px; margin-bottom: 12px; }
+.upload-area .upload-text { font-size: 15px; font-weight: 500; margin-bottom: 4px; }
+.upload-area .upload-sub { font-size: 12px; color: var(--text2); }
+
+/* Preview */
+.preview-wrap {
+  position: relative; margin-bottom: 16px;
+  border-radius: var(--radius); overflow: hidden;
+}
+.preview-wrap img {
+  width: 100%; max-height: 400px; object-fit: contain;
+  background: var(--bg2); border-radius: var(--radius);
+}
+.preview-remove {
+  position: absolute; top: 8px; right: 8px;
+  width: 32px; height: 32px; border-radius: 50%;
+  background: rgba(0,0,0,0.7); border: none;
+  color: white; font-size: 18px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+
+/* Loading */
+.loading { text-align: center; padding: 40px 20px; }
+.spinner {
+  width: 40px; height: 40px; margin: 0 auto 16px;
+  border: 3px solid var(--bg3); border-top-color: var(--indigo);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-text { font-size: 14px; color: var(--text2); }
+.loading-phase { font-size: 12px; color: var(--indigo); margin-top: 4px; }
+
+/* Results */
+.result-section { margin-bottom: 20px; }
+.result-section h3 {
+  font-size: 15px; font-weight: 600;
+  margin-bottom: 10px;
+  display: flex; align-items: center; gap: 8px;
+}
+.result-text { font-size: 13px; color: var(--text2); line-height: 1.6; }
+
+.warning-card {
+  padding: 12px; border-radius: 12px; margin-bottom: 8px;
+  border-left: 3px solid;
+}
+.warning-card.info { background: rgba(59,130,246,0.1); border-color: var(--blue); }
+.warning-card.caution { background: rgba(234,179,8,0.1); border-color: var(--yellow); }
+.warning-card.warning { background: rgba(249,115,22,0.1); border-color: var(--orange); }
+.warning-card.critical { background: rgba(239,68,68,0.1); border-color: var(--red); }
+.warning-title { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+.warning-msg { font-size: 12px; color: var(--text2); }
+.warning-rec { font-size: 12px; color: var(--indigo); margin-top: 6px; }
+
+/* Ralph Loop */
+.ralph-step {
+  padding: 12px; margin-bottom: 8px;
+  background: rgba(99,102,241,0.05);
+  border-radius: 10px;
+}
+.ralph-phase { font-size: 12px; font-weight: 700; color: var(--indigo); margin-bottom: 4px; }
+.ralph-text { font-size: 12px; color: var(--text2); line-height: 1.5; }
+
+/* History */
+.history-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px; margin-bottom: 8px;
+  background: var(--card); border-radius: 12px;
+  border: 1px solid var(--card-border);
+  cursor: pointer; transition: background 0.2s;
+}
+.history-item:active { background: var(--bg3); }
+.history-emoji { font-size: 28px; }
+.history-info { flex: 1; }
+.history-date { font-size: 13px; font-weight: 500; }
+.history-detail { font-size: 11px; color: var(--text2); }
+.history-score { font-size: 18px; font-weight: 700; }
+
+/* Settings */
+.setting-group { margin-bottom: 24px; }
+.setting-group h3 { font-size: 13px; color: var(--text2); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; }
+.setting-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.setting-label { font-size: 15px; }
+.setting-value { font-size: 15px; font-weight: 600; color: var(--indigo); }
+input[type="range"] {
+  -webkit-appearance: none; width: 100%; height: 4px;
+  background: var(--bg3); border-radius: 2px; outline: none;
+  margin-top: 8px;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 24px; height: 24px;
+  background: var(--indigo); border-radius: 50%; cursor: pointer;
+}
+
+/* Methodology cards */
+.method-card {
+  background: var(--card); border-radius: 12px;
+  padding: 16px; margin-bottom: 10px;
+  border: 1px solid var(--card-border);
+  cursor: pointer; transition: background 0.2s;
+}
+.method-card:active { background: var(--bg3); }
+.method-card h4 { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+.method-card p { font-size: 12px; color: var(--text2); }
+
+/* Empty state */
+.empty { text-align: center; padding: 40px 20px; }
+.empty-icon { font-size: 48px; margin-bottom: 12px; opacity: 0.5; }
+.empty-text { font-size: 15px; color: var(--text2); }
+.empty-sub { font-size: 12px; color: var(--text3); margin-top: 4px; }
+
+/* Modal */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+  z-index: 200; display: none;
+  align-items: flex-end; justify-content: center;
+}
+.modal-overlay.show { display: flex; }
+.modal {
+  background: var(--bg2); width: 100%; max-width: 500px;
+  max-height: 85vh; overflow-y: auto;
+  border-radius: 20px 20px 0 0;
+  padding: 24px; padding-bottom: calc(24px + var(--safe-bottom));
+}
+.modal-handle {
+  width: 36px; height: 4px; background: var(--text3);
+  border-radius: 2px; margin: 0 auto 20px;
+}
+.modal h2 { font-size: 20px; font-weight: 700; margin-bottom: 16px; }
+.modal-close {
+  float: right; background: var(--bg3); border: none;
+  color: var(--text); width: 30px; height: 30px; border-radius: 50%;
+  font-size: 16px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+
+/* Fade in animation */
+@keyframes fadeUp { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
+.fade-up { animation: fadeUp 0.4s ease; }
+
+/* Error */
+.error-msg {
+  background: rgba(239,68,68,0.1);
+  border: 1px solid rgba(239,68,68,0.3);
+  border-radius: 12px; padding: 14px;
+  margin-bottom: 16px; font-size: 13px; color: var(--red);
+}
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <h1><span>T</span>erminus</h1>
+</div>
+
+<!-- Main Content -->
+<div class="main">
+
+  <!-- ===== DASHBOARD TAB ===== -->
+  <div id="tab-dashboard" class="tab-content active">
+    <div id="dashboard-empty" class="empty fade-up">
+      <div class="empty-icon">📱</div>
+      <div class="empty-text">Benvenuto in Terminus</div>
+      <div class="empty-sub">Condividi uno screenshot del tuo Tempo di Utilizzo per iniziare l'analisi</div>
+      <br>
+      <button class="btn btn-primary" onclick="switchTab('analyze')">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+        Analizza Screenshot
+      </button>
+    </div>
+    <div id="dashboard-content" style="display:none">
+      <!-- Wellness Score -->
+      <div class="card fade-up">
+        <div class="card-title">Benessere Digitale</div>
+        <div class="score-wrap">
+          <div class="score-circle">
+            <svg viewBox="0 0 100 100">
+              <circle class="bg" cx="50" cy="50" r="42"/>
+              <circle class="fg" id="score-ring" cx="50" cy="50" r="42"
+                stroke-dasharray="263.9" stroke-dashoffset="263.9"/>
+            </svg>
+            <div class="score-value">
+              <div class="num" id="score-num">--</div>
+              <div class="label">/ 100</div>
+            </div>
+          </div>
+          <div class="score-msg" id="score-msg"></div>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div class="stats-row fade-up">
+        <div class="stat-card">
+          <div class="stat-icon">📱</div>
+          <div class="stat-val" id="stat-time">--</div>
+          <div class="stat-label">Tempo Schermo</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">🎯</div>
+          <div class="stat-val" id="stat-goal">--</div>
+          <div class="stat-label">Obiettivo</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">🧠</div>
+          <div class="stat-val" id="stat-brain">--</div>
+          <div class="stat-label">Salute Cervello</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">😊</div>
+          <div class="stat-val" id="stat-mood">--</div>
+          <div class="stat-label">Impatto Umore</div>
+        </div>
+      </div>
+
+      <!-- Categories -->
+      <div class="card fade-up">
+        <div class="card-title">Per Categoria</div>
+        <div id="cat-list"></div>
+      </div>
+
+      <!-- AI Advice -->
+      <div class="card fade-up" id="advice-card" style="display:none">
+        <div class="card-title" style="color:var(--indigo)">Consiglio AI</div>
+        <div class="result-text" id="advice-text"></div>
+      </div>
+
+      <!-- New Analysis Button -->
+      <button class="btn btn-primary" onclick="switchTab('analyze')" style="margin-top:8px">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+        Nuova Analisi
+      </button>
+    </div>
+  </div>
+
+  <!-- ===== ANALYZE TAB ===== -->
+  <div id="tab-analyze" class="tab-content">
+    <div id="analyze-upload" class="fade-up">
+      <div class="card">
+        <div class="card-title">Analizza Tempo di Utilizzo</div>
+        <p style="font-size:13px; color:var(--text2); margin-bottom:16px; line-height:1.5">
+          Condividi uno screenshot della schermata <strong>Impostazioni &gt; Tempo di utilizzo</strong> del tuo iPhone. L'AI estrarrà i dati e analizzerà il tuo benessere digitale.
+        </p>
+
+        <div id="upload-zone" class="upload-area" onclick="document.getElementById('file-input').click()">
+          <div class="upload-icon">📸</div>
+          <div class="upload-text">Tocca per caricare screenshot</div>
+          <div class="upload-sub">oppure scatta una foto della schermata</div>
+        </div>
+        <input type="file" id="file-input" accept="image/*" capture="environment" style="display:none" onchange="handleFileSelect(event)">
+
+        <div id="preview-container" class="preview-wrap" style="display:none">
+          <img id="preview-img" src="">
+          <button class="preview-remove" onclick="clearPreview()">&times;</button>
+        </div>
+
+        <button id="analyze-btn" class="btn btn-primary" onclick="startAnalysis()" disabled>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
+          Analizza con AI
+        </button>
+      </div>
+
+      <!-- Manual Input Option -->
+      <div class="card" style="margin-top:4px">
+        <div class="card-title">Inserimento Manuale</div>
+        <p style="font-size:12px; color:var(--text2); margin-bottom:12px">
+          Se preferisci, puoi inserire i dati manualmente.
+        </p>
+        <div style="display:grid; gap:10px">
+          <div>
+            <label style="font-size:12px; color:var(--text2)">Tempo totale (minuti)</label>
+            <input id="manual-total" type="number" placeholder="es. 180" style="width:100%; padding:10px; background:var(--bg3); border:1px solid var(--card-border); border-radius:8px; color:var(--text); font-size:15px; margin-top:4px">
+          </div>
+          <div>
+            <label style="font-size:12px; color:var(--text2)">Social Media (minuti)</label>
+            <input id="manual-social" type="number" placeholder="es. 60" style="width:100%; padding:10px; background:var(--bg3); border:1px solid var(--card-border); border-radius:8px; color:var(--text); font-size:15px; margin-top:4px">
+          </div>
+          <div>
+            <label style="font-size:12px; color:var(--text2)">Intrattenimento (minuti)</label>
+            <input id="manual-entertainment" type="number" placeholder="es. 45" style="width:100%; padding:10px; background:var(--bg3); border:1px solid var(--card-border); border-radius:8px; color:var(--text); font-size:15px; margin-top:4px">
+          </div>
+          <div>
+            <label style="font-size:12px; color:var(--text2)">Gaming (minuti)</label>
+            <input id="manual-gaming" type="number" placeholder="es. 30" style="width:100%; padding:10px; background:var(--bg3); border:1px solid var(--card-border); border-radius:8px; color:var(--text); font-size:15px; margin-top:4px">
+          </div>
+          <div>
+            <label style="font-size:12px; color:var(--text2)">Produttivit&agrave; (minuti)</label>
+            <input id="manual-productivity" type="number" placeholder="es. 25" style="width:100%; padding:10px; background:var(--bg3); border:1px solid var(--card-border); border-radius:8px; color:var(--text); font-size:15px; margin-top:4px">
+          </div>
+          <button class="btn btn-secondary" onclick="startManualAnalysis()" style="margin-top:4px">
+            Analizza Dati Manuali
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Loading State -->
+    <div id="analyze-loading" style="display:none">
+      <div class="loading">
+        <div class="spinner"></div>
+        <div class="loading-text">Analisi in corso...</div>
+        <div class="loading-phase" id="loading-phase">GSD: Capture - Raccolta dati</div>
+      </div>
+    </div>
+
+    <!-- Error State -->
+    <div id="analyze-error" style="display:none"></div>
+
+    <!-- Results -->
+    <div id="analyze-results" style="display:none" class="fade-up">
+      <div class="card">
+        <div class="card-title" style="color:var(--green)">Analisi Completata</div>
+
+        <!-- Scores -->
+        <div class="result-section">
+          <h3>📊 Punteggi</h3>
+          <div class="stats-row" style="margin-bottom:0">
+            <div class="stat-card">
+              <div class="stat-val" id="res-wellness" style="color:var(--green)">--</div>
+              <div class="stat-label">Benessere</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-val" id="res-mood" style="color:var(--pink)">--</div>
+              <div class="stat-label">Umore</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-val" id="res-brain" style="color:var(--purple)">--</div>
+              <div class="stat-label">Cervello</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-val" id="res-prod" style="color:var(--teal)">--</div>
+              <div class="stat-label">Produttivit&agrave;</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- AI Advice -->
+        <div class="result-section">
+          <h3>💡 Consiglio AI</h3>
+          <div class="result-text" id="res-advice"></div>
+        </div>
+
+        <!-- Warnings -->
+        <div class="result-section" id="res-warnings-section" style="display:none">
+          <h3>⚠️ Avvisi</h3>
+          <div id="res-warnings"></div>
+        </div>
+
+        <!-- Ralph Loop -->
+        <div class="result-section">
+          <h3>🔄 Ralph Loop</h3>
+          <div id="res-ralph"></div>
+        </div>
+      </div>
+
+      <button class="btn btn-primary" onclick="switchTab('dashboard')">Vai alla Dashboard</button>
+      <button class="btn btn-secondary" onclick="resetAnalysis()" style="margin-top:8px">Nuova Analisi</button>
+    </div>
+  </div>
+
+  <!-- ===== HISTORY TAB ===== -->
+  <div id="tab-history" class="tab-content">
+    <div id="history-empty" class="empty fade-up">
+      <div class="empty-icon">📋</div>
+      <div class="empty-text">Nessun report</div>
+      <div class="empty-sub">I tuoi report appariranno qui dopo la prima analisi</div>
+    </div>
+    <div id="history-list" class="fade-up"></div>
+  </div>
+
+  <!-- ===== SETTINGS TAB ===== -->
+  <div id="tab-settings" class="tab-content">
+    <div class="fade-up">
+      <!-- Goal Setting -->
+      <div class="card">
+        <div class="card-title">Obiettivo Giornaliero</div>
+        <div class="setting-row">
+          <span class="setting-label">Tempo schermo</span>
+          <span class="setting-value" id="goal-display">2h 0m</span>
+        </div>
+        <input type="range" id="goal-slider" min="30" max="480" step="15" value="120"
+          oninput="updateGoal(this.value)">
+        <div style="font-size:11px; color:var(--text3); margin-top:6px">
+          Raccomandato: meno di 2 ore per uso ricreativo
+        </div>
+      </div>
+
+      <!-- Methodologies -->
+      <div class="card">
+        <div class="card-title">Metodologie</div>
+        <div class="method-card" onclick="showMethodModal('gsd')">
+          <h4>📋 Metodo GSD</h4>
+          <p>Capture &rarr; Clarify &rarr; Organize &rarr; Reflect &rarr; Engage</p>
+        </div>
+        <div class="method-card" onclick="showMethodModal('ralph')">
+          <h4>🔄 Ralph Loop</h4>
+          <p>Review &rarr; Analyze &rarr; Learn &rarr; Plan &rarr; Habituate</p>
+        </div>
+        <div class="method-card" onclick="showMethodModal('bmad')">
+          <h4>🏛️ BMAD Framework</h4>
+          <p>Build &rarr; Measure &rarr; Analyze &rarr; Decide</p>
+        </div>
+      </div>
+
+      <!-- Info -->
+      <div class="card">
+        <div class="card-title">Info</div>
+        <div class="setting-row">
+          <span class="setting-label">Versione</span>
+          <span style="color:var(--text2)">1.0.0 Web</span>
+        </div>
+        <div class="setting-row">
+          <span class="setting-label">AI Engine</span>
+          <span style="color:var(--text2)">Groq - Llama</span>
+        </div>
+        <div class="setting-row">
+          <span class="setting-label">Stato AI</span>
+          <span style="color:var(--green); font-weight:600">Attiva</span>
+        </div>
+      </div>
+
+      <!-- Clear Data -->
+      <div class="card" style="border-color: rgba(239,68,68,0.3)">
+        <button class="btn" style="background:rgba(239,68,68,0.15); color:var(--red)" onclick="clearAllData()">
+          Cancella Tutti i Dati
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Tab Bar -->
+<nav class="tabbar">
+  <button class="tab-btn active" onclick="switchTab('dashboard')" data-tab="dashboard">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1h-2z"/></svg>
+    <span>Dashboard</span>
+  </button>
+  <button class="tab-btn" onclick="switchTab('analyze')" data-tab="analyze">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
+    <span>Analizza</span>
+  </button>
+  <button class="tab-btn" onclick="switchTab('history')" data-tab="history">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+    <span>Storico</span>
+  </button>
+  <button class="tab-btn" onclick="switchTab('settings')" data-tab="settings">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><circle cx="12" cy="12" r="3"/></svg>
+    <span>Info</span>
+  </button>
+</nav>
+
+<!-- Method Modal -->
+<div class="modal-overlay" id="method-modal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <button class="modal-close" onclick="closeModal()">&times;</button>
+    <div id="modal-content"></div>
+  </div>
+</div>
+
+<!-- Detail Modal -->
+<div class="modal-overlay" id="detail-modal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <button class="modal-close" onclick="closeDetailModal()">&times;</button>
+    <div id="detail-content"></div>
+  </div>
+</div>
+
+<script>
+// ============ CONFIGURATION ============
+const CONFIG = {
+  GROQ_API: 'https://api.groq.com/openai/v1/chat/completions',
+  API_KEY: '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',
+  VISION_MODEL: 'llama-3.2-90b-vision-preview',
+  TEXT_MODEL: 'llama-3.3-70b-versatile',
+  MAX_IMG_WIDTH: 1024
+};
+
+// ============ STATE ============
+let state = {
+  currentTab: 'dashboard',
+  selectedImage: null,
+  imageBase64: null,
+  isAnalyzing: false,
+  latestReport: null,
+  history: [],
+  goal: 120
+};
+
+// ============ STORAGE ============
+const Storage = {
+  save() {
+    const data = { history: state.history, goal: state.goal };
+    localStorage.setItem('terminus_data', JSON.stringify(data));
+  },
+  load() {
+    try {
+      const data = JSON.parse(localStorage.getItem('terminus_data'));
+      if (data) {
+        state.history = data.history || [];
+        state.goal = data.goal || 120;
+      }
+    } catch(e) {}
+  }
+};
+
+// ============ API SERVICE ============
+const API = {
+  async callGroq(model, messages, retries = 2) {
+    for (let i = 0; i <= retries; i++) {
+      try {
+        const res = await fetch(CONFIG.GROQ_API, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${CONFIG.API_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            model,
+            messages,
+            temperature: 0.7,
+            max_tokens: 2048
+          })
+        });
+
+        if (!res.ok) {
+          const err = await res.text();
+          throw new Error(`API ${res.status}: ${err}`);
+        }
+
+        const data = await res.json();
+        return data.choices[0].message.content;
+      } catch(e) {
+        if (i === retries) throw e;
+        await new Promise(r => setTimeout(r, Math.pow(2, i) * 1000));
+      }
+    }
+  },
+
+  async extractFromScreenshot(base64) {
+    updateLoadingPhase('GSD: Capture - Estrazione dati dallo screenshot...');
+
+    const content = [
+      {
+        type: 'text',
+        text: `Analizza questo screenshot del Tempo di Utilizzo (Screen Time) di un iPhone.
+Estrai TUTTI i dati visibili e rispondi SOLO con JSON valido (senza markdown):
+{
+  "totalMinutes": <numero totale minuti>,
+  "categories": [
+    {"name": "<nome categoria>", "minutes": <minuti>, "type": "<socialMedia|entertainment|gaming|communication|productivity|education|news|health|utilities|other>"}
+  ],
+  "apps": [
+    {"name": "<nome app>", "minutes": <minuti>, "category": "<tipo>"}
+  ],
+  "pickups": <numero sblocchi se visibile, altrimenti 0>,
+  "notifications": <numero notifiche se visibile, altrimenti 0>
+}`
+      },
+      {
+        type: 'image_url',
+        image_url: { url: `data:image/jpeg;base64,${base64}` }
+      }
+    ];
+
+    const result = await this.callGroq(CONFIG.VISION_MODEL, [
+      { role: 'user', content }
+    ]);
+
+    return this.parseJSON(result);
+  },
+
+  async analyzeWellness(usageData) {
+    updateLoadingPhase('GSD: Clarify + Organize - Analisi AI benessere...');
+
+    const goalMin = state.goal;
+    const totalMin = usageData.totalMinutes;
+    const catStr = usageData.categories.map(c => `- ${c.name}: ${c.minutes} min (${c.type})`).join('\n');
+    const appStr = (usageData.apps || []).slice(0, 10).map(a => `- ${a.name}: ${a.minutes} min`).join('\n');
+
+    const systemPrompt = `Sei un esperto di benessere digitale e neuroscienze. Analizza i dati di utilizzo dello smartphone e fornisci consigli in italiano.
+
+Considera gli effetti su:
+1. UMORE: Come il tempo schermo influenza serotonina, dopamina e stato emotivo
+2. CERVELLO: Impatto su attenzione, memoria, qualità del sonno, neuroplasticità
+3. GIORNATA: Produttività, relazioni sociali, attività fisica
+
+Usa il metodo RALPH Loop:
+- Review: Rivedi i dati di oggi
+- Analyze: Analizza i pattern problematici
+- Learn: Cosa possiamo imparare
+- Plan: Piano d'azione concreto
+- Habituate: Suggerisci un'abitudine positiva
+
+Rispondi SOLO con JSON valido (senza markdown, solo JSON puro):
+{
+  "moodImpactScore": <1-100, 100=peggiore>,
+  "brainHealthScore": <1-100, 100=peggiore>,
+  "productivityScore": <1-100, 100=migliore>,
+  "advice": "<consiglio principale>",
+  "warnings": [{"severity": "<info|caution|warning|critical>", "title": "<titolo>", "message": "<msg>", "recommendation": "<rec>"}],
+  "ralphLoop": {"review": "<>", "analyze": "<>", "learn": "<>", "plan": "<>", "habituate": "<>"}
+}`;
+
+    const userMessage = `Dati smartphone oggi:
+Tempo totale: ${totalMin} minuti (obiettivo: ${goalMin} min)
+
+Categorie:
+${catStr}
+
+App principali:
+${appStr || 'Non disponibile'}
+
+Sblocchi: ${usageData.pickups || 'N/D'}
+Notifiche: ${usageData.notifications || 'N/D'}`;
+
+    const result = await this.callGroq(CONFIG.TEXT_MODEL, [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: userMessage }
+    ]);
+
+    return this.parseJSON(result);
+  },
+
+  parseJSON(text) {
+    let s = text.trim();
+    if (s.startsWith('```json')) s = s.slice(7);
+    else if (s.startsWith('```')) s = s.slice(3);
+    if (s.endsWith('```')) s = s.slice(0, -3);
+    s = s.trim();
+    const start = s.indexOf('{');
+    const end = s.lastIndexOf('}');
+    if (start !== -1 && end !== -1) s = s.substring(start, end + 1);
+    return JSON.parse(s);
+  }
+};
+
+// ============ IMAGE HANDLING ============
+function handleFileSelect(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function(ev) {
+    const img = new Image();
+    img.onload = function() {
+      // Resize for API
+      const canvas = document.createElement('canvas');
+      const scale = Math.min(1, CONFIG.MAX_IMG_WIDTH / img.width);
+      canvas.width = img.width * scale;
+      canvas.height = img.height * scale;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      state.imageBase64 = canvas.toDataURL('image/jpeg', 0.85).split(',')[1];
+
+      // Show preview
+      document.getElementById('preview-img').src = ev.target.result;
+      document.getElementById('preview-container').style.display = 'block';
+      document.getElementById('upload-zone').style.display = 'none';
+      document.getElementById('analyze-btn').disabled = false;
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function clearPreview() {
+  state.imageBase64 = null;
+  document.getElementById('preview-container').style.display = 'none';
+  document.getElementById('upload-zone').style.display = 'block';
+  document.getElementById('analyze-btn').disabled = true;
+  document.getElementById('file-input').value = '';
+}
+
+// ============ ANALYSIS ============
+async function startAnalysis() {
+  if (!state.imageBase64 || state.isAnalyzing) return;
+  state.isAnalyzing = true;
+
+  showSection('analyze-loading');
+
+  try {
+    // Step 1: Extract data from screenshot
+    updateLoadingPhase('GSD: Capture - Estrazione dati...');
+    let usageData;
+    try {
+      usageData = await API.extractFromScreenshot(state.imageBase64);
+    } catch(e) {
+      // If vision model fails, try with text model describing the task
+      throw new Error('Impossibile estrarre dati dallo screenshot. Prova con inserimento manuale. Errore: ' + e.message);
+    }
+
+    // Step 2: Analyze wellness
+    updateLoadingPhase('GSD: Clarify - Analisi pattern...');
+    await new Promise(r => setTimeout(r, 500));
+
+    updateLoadingPhase('Ralph Loop: Review + Analyze...');
+    const wellness = await API.analyzeWellness(usageData);
+
+    // Step 3: Build report
+    updateLoadingPhase('GSD: Organize - Generazione report...');
+    await new Promise(r => setTimeout(r, 300));
+
+    const report = buildReport(usageData, wellness);
+
+    // Step 4: Save and display
+    updateLoadingPhase('GSD: Engage - Salvataggio...');
+    state.latestReport = report;
+    state.history.unshift(report);
+    if (state.history.length > 50) state.history.pop();
+    Storage.save();
+
+    displayResults(report);
+    updateDashboard(report);
+    updateHistory();
+    showSection('analyze-results');
+
+  } catch(e) {
+    showError(e.message);
+  } finally {
+    state.isAnalyzing = false;
+  }
+}
+
+async function startManualAnalysis() {
+  const total = parseInt(document.getElementById('manual-total').value) || 0;
+  if (total === 0) { showError('Inserisci almeno il tempo totale.'); return; }
+
+  const social = parseInt(document.getElementById('manual-social').value) || 0;
+  const ent = parseInt(document.getElementById('manual-entertainment').value) || 0;
+  const gaming = parseInt(document.getElementById('manual-gaming').value) || 0;
+  const prod = parseInt(document.getElementById('manual-productivity').value) || 0;
+  const other = Math.max(0, total - social - ent - gaming - prod);
+
+  const usageData = {
+    totalMinutes: total,
+    categories: [
+      ...(social > 0 ? [{ name: 'Social Media', minutes: social, type: 'socialMedia' }] : []),
+      ...(ent > 0 ? [{ name: 'Intrattenimento', minutes: ent, type: 'entertainment' }] : []),
+      ...(gaming > 0 ? [{ name: 'Gaming', minutes: gaming, type: 'gaming' }] : []),
+      ...(prod > 0 ? [{ name: 'Produttivit\u00e0', minutes: prod, type: 'productivity' }] : []),
+      ...(other > 0 ? [{ name: 'Altro', minutes: other, type: 'other' }] : [])
+    ],
+    apps: [],
+    pickups: 0,
+    notifications: 0
+  };
+
+  state.isAnalyzing = true;
+  showSection('analyze-loading');
+
+  try {
+    updateLoadingPhase('Ralph Loop: Analisi benessere...');
+    const wellness = await API.analyzeWellness(usageData);
+    const report = buildReport(usageData, wellness);
+
+    state.latestReport = report;
+    state.history.unshift(report);
+    if (state.history.length > 50) state.history.pop();
+    Storage.save();
+
+    displayResults(report);
+    updateDashboard(report);
+    updateHistory();
+    showSection('analyze-results');
+  } catch(e) {
+    showError(e.message);
+  } finally {
+    state.isAnalyzing = false;
+  }
+}
+
+function buildReport(usageData, wellness) {
+  const moodScore = Math.min(100, Math.max(1, wellness.moodImpactScore || 50));
+  const brainScore = Math.min(100, Math.max(1, wellness.brainHealthScore || 50));
+  const prodScore = Math.min(100, Math.max(1, wellness.productivityScore || 50));
+  const overall = Math.round(((100 - moodScore) + (100 - brainScore) + prodScore) / 3);
+
+  return {
+    id: Date.now(),
+    date: new Date().toISOString(),
+    totalMinutes: usageData.totalMinutes,
+    categories: usageData.categories,
+    apps: usageData.apps || [],
+    moodImpactScore: moodScore,
+    brainHealthScore: brainScore,
+    productivityScore: prodScore,
+    overallScore: overall,
+    advice: wellness.advice || '',
+    warnings: wellness.warnings || [],
+    ralphLoop: wellness.ralphLoop || {},
+    goal: state.goal
+  };
+}
+
+// ============ UI RENDERING ============
+function displayResults(report) {
+  document.getElementById('res-wellness').textContent = report.overallScore + '/100';
+  document.getElementById('res-mood').textContent = (100 - report.moodImpactScore) + '/100';
+  document.getElementById('res-brain').textContent = (100 - report.brainHealthScore) + '/100';
+  document.getElementById('res-prod').textContent = report.productivityScore + '/100';
+  document.getElementById('res-advice').textContent = report.advice;
+
+  // Color the wellness score
+  const wc = scoreColor(report.overallScore);
+  document.getElementById('res-wellness').style.color = wc;
+
+  // Warnings
+  const warnDiv = document.getElementById('res-warnings');
+  const warnSection = document.getElementById('res-warnings-section');
+  if (report.warnings && report.warnings.length > 0) {
+    warnSection.style.display = 'block';
+    warnDiv.innerHTML = report.warnings.map(w => `
+      <div class="warning-card ${w.severity}">
+        <div class="warning-title">${w.title}</div>
+        <div class="warning-msg">${w.message}</div>
+        <div class="warning-rec">💡 ${w.recommendation}</div>
+      </div>
+    `).join('');
+  } else {
+    warnSection.style.display = 'none';
+  }
+
+  // Ralph Loop
+  const ralph = report.ralphLoop;
+  document.getElementById('res-ralph').innerHTML = `
+    <div class="ralph-step"><div class="ralph-phase">👁 Review</div><div class="ralph-text">${ralph.review || ''}</div></div>
+    <div class="ralph-step"><div class="ralph-phase">🔍 Analyze</div><div class="ralph-text">${ralph.analyze || ''}</div></div>
+    <div class="ralph-step"><div class="ralph-phase">💡 Learn</div><div class="ralph-text">${ralph.learn || ''}</div></div>
+    <div class="ralph-step"><div class="ralph-phase">📋 Plan</div><div class="ralph-text">${ralph.plan || ''}</div></div>
+    <div class="ralph-step"><div class="ralph-phase">🔄 Habituate</div><div class="ralph-text">${ralph.habituate || ''}</div></div>
+  `;
+}
+
+function updateDashboard(report) {
+  document.getElementById('dashboard-empty').style.display = 'none';
+  document.getElementById('dashboard-content').style.display = 'block';
+
+  // Score circle
+  const score = report.overallScore;
+  const ring = document.getElementById('score-ring');
+  const offset = 263.9 - (263.9 * score / 100);
+  ring.style.strokeDashoffset = offset;
+  ring.style.stroke = scoreColor(score);
+  document.getElementById('score-num').textContent = score;
+  document.getElementById('score-num').style.color = scoreColor(score);
+  document.getElementById('score-msg').textContent = scoreMessage(score);
+
+  // Stats
+  document.getElementById('stat-time').textContent = formatMin(report.totalMinutes);
+  document.getElementById('stat-goal').textContent = formatMin(state.goal);
+  document.getElementById('stat-brain').textContent = (100 - report.brainHealthScore) + '/100';
+  document.getElementById('stat-mood').textContent = (100 - report.moodImpactScore) + '/100';
+
+  // Goal color
+  const timeEl = document.getElementById('stat-time');
+  timeEl.style.color = report.totalMinutes > state.goal ? 'var(--red)' : 'var(--green)';
+
+  // Categories
+  const catList = document.getElementById('cat-list');
+  const maxMin = Math.max(...report.categories.map(c => c.minutes), 1);
+  catList.innerHTML = report.categories.map(c => {
+    const color = catColor(c.type);
+    const pct = Math.round(c.minutes / report.totalMinutes * 100);
+    const barPct = Math.round(c.minutes / maxMin * 100);
+    return `<div class="cat-row">
+      <div class="cat-icon" style="background:${color}">${catEmoji(c.type)}</div>
+      <div class="cat-info">
+        <div class="cat-name">${c.name}</div>
+        <div class="cat-time">${c.minutes} min (${pct}%)</div>
+      </div>
+      <div class="cat-bar"><div class="cat-bar-fill" style="width:${barPct}%; background:${color}"></div></div>
+    </div>`;
+  }).join('');
+
+  // Advice
+  if (report.advice) {
+    document.getElementById('advice-card').style.display = 'block';
+    document.getElementById('advice-text').textContent = report.advice;
+  }
+}
+
+function updateHistory() {
+  const list = document.getElementById('history-list');
+  const empty = document.getElementById('history-empty');
+
+  if (state.history.length === 0) {
+    empty.style.display = 'block';
+    list.innerHTML = '';
+    return;
+  }
+
+  empty.style.display = 'none';
+  list.innerHTML = state.history.map(r => {
+    const d = new Date(r.date);
+    const dateStr = d.toLocaleDateString('it-IT', { day: 'numeric', month: 'short', year: 'numeric' });
+    const emoji = r.overallScore >= 80 ? '🌟' : r.overallScore >= 60 ? '😊' : r.overallScore >= 40 ? '😐' : r.overallScore >= 20 ? '😟' : '🚨';
+    const color = scoreColor(r.overallScore);
+    return `<div class="history-item" onclick="showReportDetail(${r.id})">
+      <div class="history-emoji">${emoji}</div>
+      <div class="history-info">
+        <div class="history-date">${dateStr}</div>
+        <div class="history-detail">Schermo: ${formatMin(r.totalMinutes)} | Cat: ${r.categories.length}</div>
+      </div>
+      <div class="history-score" style="color:${color}">${r.overallScore}</div>
+    </div>`;
+  }).join('');
+}
+
+// ============ HELPERS ============
+function scoreColor(s) {
+  if (s >= 70) return 'var(--green)';
+  if (s >= 40) return 'var(--orange)';
+  return 'var(--red)';
+}
+
+function scoreMessage(s) {
+  if (s >= 80) return 'Ottimo equilibrio digitale!';
+  if (s >= 60) return 'Buono, ma puoi migliorare';
+  if (s >= 40) return 'Attenzione al tempo schermo';
+  return 'Il tuo benessere digitale necessita attenzione';
+}
+
+function formatMin(m) {
+  const h = Math.floor(m / 60);
+  const min = m % 60;
+  return h > 0 ? `${h}h ${min}m` : `${min}m`;
+}
+
+function catColor(type) {
+  const colors = {
+    socialMedia: 'var(--red)', entertainment: 'var(--orange)',
+    gaming: 'var(--purple)', communication: 'var(--green)',
+    productivity: 'var(--teal)', education: 'var(--indigo)',
+    news: 'var(--blue)', health: 'var(--pink)',
+    utilities: 'gray', other: '#666'
+  };
+  return colors[type] || '#666';
+}
+
+function catEmoji(type) {
+  const emojis = {
+    socialMedia: '👥', entertainment: '🎬', gaming: '🎮',
+    communication: '💬', productivity: '💼', education: '📚',
+    news: '📰', health: '❤️', utilities: '🔧', other: '📱'
+  };
+  return emojis[type] || '📱';
+}
+
+// ============ UI NAVIGATION ============
+function switchTab(tab) {
+  state.currentTab = tab;
+  document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
+  window.scrollTo(0, 0);
+}
+
+function showSection(id) {
+  ['analyze-upload', 'analyze-loading', 'analyze-error', 'analyze-results']
+    .forEach(s => document.getElementById(s).style.display = 'none');
+  document.getElementById(id).style.display = 'block';
+}
+
+function resetAnalysis() {
+  clearPreview();
+  showSection('analyze-upload');
+  document.getElementById('analyze-error').style.display = 'none';
+}
+
+function showError(msg) {
+  const errDiv = document.getElementById('analyze-error');
+  errDiv.innerHTML = `<div class="error-msg">⚠️ ${msg}</div>
+    <button class="btn btn-secondary" onclick="resetAnalysis()">Riprova</button>`;
+  showSection('analyze-error');
+  errDiv.style.display = 'block';
+}
+
+function updateLoadingPhase(text) {
+  document.getElementById('loading-phase').textContent = text;
+}
+
+function updateGoal(val) {
+  state.goal = parseInt(val);
+  document.getElementById('goal-display').textContent = formatMin(state.goal);
+  Storage.save();
+}
+
+// ============ MODALS ============
+function showMethodModal(type) {
+  const content = {
+    gsd: `<h2>📋 Metodo GSD</h2>
+      <p style="color:var(--text2); margin-bottom:16px">Il metodo GSD (Getting Stuff Done) guida il monitoraggio del tuo benessere digitale.</p>
+      <div class="ralph-step"><div class="ralph-phase">1. Capture</div><div class="ralph-text">Raccogliamo tutti i dati di utilizzo delle app dal tuo dispositivo.</div></div>
+      <div class="ralph-step"><div class="ralph-phase">2. Clarify</div><div class="ralph-text">Analizziamo e categorizziamo i dati per identificare pattern.</div></div>
+      <div class="ralph-step"><div class="ralph-phase">3. Organize</div><div class="ralph-text">Organizziamo le informazioni in report strutturati con l'aiuto dell'AI.</div></div>
+      <div class="ralph-step"><div class="ralph-phase">4. Reflect</div><div class="ralph-text">Riflettiamo sugli effetti del tempo schermo su umore e cervello.</div></div>
+      <div class="ralph-step"><div class="ralph-phase">5. Engage</div><div class="ralph-text">Agiamo con consigli concreti e limiti personalizzati.</div></div>`,
+    ralph: `<h2>🔄 Ralph Loop</h2>
+      <p style="color:var(--text2); margin-bottom:16px">Ciclo di miglioramento continuo per abitudini digitali più sane.</p>
+      <div class="ralph-step"><div class="ralph-phase">Review</div><div class="ralph-text">Revisione quotidiana del tempo schermo e delle abitudini.</div></div>
+      <div class="ralph-step"><div class="ralph-phase">Analyze</div><div class="ralph-text">Analisi approfondita dell'impatto su salute mentale e produttività.</div></div>
+      <div class="ralph-step"><div class="ralph-phase">Learn</div><div class="ralph-text">Apprendimento dai pattern e ricerche neuroscientifiche.</div></div>
+      <div class="ralph-step"><div class="ralph-phase">Plan</div><div class="ralph-text">Pianificazione di azioni concrete per migliorare.</div></div>
+      <div class="ralph-step"><div class="ralph-phase">Habituate</div><div class="ralph-text">Costruzione graduale di abitudini positive e sostenibili.</div></div>`,
+    bmad: `<h2>🏛️ BMAD Framework</h2>
+      <p style="color:var(--text2); margin-bottom:16px">Framework architetturale alla base di Terminus.</p>
+      <div class="ralph-step"><div class="ralph-phase">Build</div><div class="ralph-text">Costruiamo strumenti di monitoraggio e analisi del tempo schermo.</div></div>
+      <div class="ralph-step"><div class="ralph-phase">Measure</div><div class="ralph-text">Misuriamo l'impatto reale dell'utilizzo su umore, sonno e produttività.</div></div>
+      <div class="ralph-step"><div class="ralph-phase">Analyze</div><div class="ralph-text">Analizziamo i dati con AI per generare insight personalizzati.</div></div>
+      <div class="ralph-step"><div class="ralph-phase">Decide</div><div class="ralph-text">Ti aiutiamo a prendere decisioni informate sul tuo uso dello smartphone.</div></div>`
+  };
+  document.getElementById('modal-content').innerHTML = content[type];
+  document.getElementById('method-modal').classList.add('show');
+}
+
+function closeModal() {
+  document.getElementById('method-modal').classList.remove('show');
+}
+
+function showReportDetail(id) {
+  const report = state.history.find(r => r.id === id);
+  if (!report) return;
+
+  const d = new Date(report.date);
+  const dateStr = d.toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  const emoji = report.overallScore >= 80 ? '🌟' : report.overallScore >= 60 ? '😊' : report.overallScore >= 40 ? '😐' : '😟';
+
+  let html = `
+    <h2>${emoji} Report ${dateStr}</h2>
+    <div class="stats-row" style="margin:16px 0">
+      <div class="stat-card"><div class="stat-val" style="color:${scoreColor(report.overallScore)}">${report.overallScore}</div><div class="stat-label">Benessere</div></div>
+      <div class="stat-card"><div class="stat-val">${formatMin(report.totalMinutes)}</div><div class="stat-label">Tempo Schermo</div></div>
+    </div>
+    <div style="margin-bottom:16px">
+      <h3 style="font-size:14px; margin-bottom:8px">Categorie</h3>
+      ${report.categories.map(c => `<div style="display:flex; justify-content:space-between; padding:6px 0; font-size:13px; border-bottom:1px solid rgba(255,255,255,0.04)">
+        <span>${catEmoji(c.type)} ${c.name}</span><span style="color:var(--text2)">${c.minutes} min</span>
+      </div>`).join('')}
+    </div>`;
+
+  if (report.advice) {
+    html += `<div style="margin-bottom:16px"><h3 style="font-size:14px; margin-bottom:8px">💡 Consiglio AI</h3><p style="font-size:13px; color:var(--text2); line-height:1.6">${report.advice}</p></div>`;
+  }
+
+  if (report.ralphLoop) {
+    html += `<div><h3 style="font-size:14px; margin-bottom:8px">🔄 Ralph Loop</h3>`;
+    for (const [phase, text] of Object.entries(report.ralphLoop)) {
+      if (text) html += `<div class="ralph-step"><div class="ralph-phase">${phase}</div><div class="ralph-text">${text}</div></div>`;
+    }
+    html += `</div>`;
+  }
+
+  document.getElementById('detail-content').innerHTML = html;
+  document.getElementById('detail-modal').classList.add('show');
+}
+
+function closeDetailModal() {
+  document.getElementById('detail-modal').classList.remove('show');
+}
+
+function clearAllData() {
+  if (!confirm('Cancellare tutti i dati? Questa azione non può essere annullata.')) return;
+  state.history = [];
+  state.latestReport = null;
+  Storage.save();
+  document.getElementById('dashboard-empty').style.display = 'block';
+  document.getElementById('dashboard-content').style.display = 'none';
+  updateHistory();
+}
+
+// ============ INITIALIZATION ============
+function init() {
+  Storage.load();
+  document.getElementById('goal-slider').value = state.goal;
+  document.getElementById('goal-display').textContent = formatMin(state.goal);
+
+  // Restore latest report to dashboard
+  if (state.history.length > 0) {
+    state.latestReport = state.history[0];
+    updateDashboard(state.latestReport);
+  }
+  updateHistory();
+
+  // Close modals on overlay click
+  document.getElementById('method-modal').addEventListener('click', function(e) {
+    if (e.target === this) closeModal();
+  });
+  document.getElementById('detail-modal').addEventListener('click', function(e) {
+    if (e.target === this) closeDetailModal();
+  });
+}
+
+init();
+</script>
+</body>
+</html>
