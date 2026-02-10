@@ -27,6 +27,8 @@
 		A10018 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B10018; };
 		A10019 /* UserProfileSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10021; };
 		A10020 /* ProfileDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10022; };
+		A10021 /* EnergyCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10023; };
+		A10022 /* EnergyCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10024; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -53,6 +55,8 @@
 		B10020 /* Terminus.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Terminus.entitlements; sourceTree = "<group>"; };
 		B10021 /* UserProfileSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserProfileSetupView.swift; sourceTree = "<group>"; };
 		B10022 /* ProfileDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileDetailView.swift; sourceTree = "<group>"; };
+		B10023 /* EnergyCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EnergyCalculator.swift; sourceTree = "<group>"; };
+		B10024 /* EnergyCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EnergyCardView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -118,6 +122,7 @@
 				B10008 /* SettingsView.swift */,
 				B10021 /* UserProfileSetupView.swift */,
 				B10022 /* ProfileDetailView.swift */,
+				B10024 /* EnergyCardView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -138,6 +143,7 @@
 				B10014 /* UsageDataStore.swift */,
 				B10015 /* NotificationService.swift */,
 				B10016 /* WellnessEngine.swift */,
+				B10023 /* EnergyCalculator.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -247,6 +253,8 @@
 				A10017 /* UsageMonitorViewModel.swift in Sources */,
 				A10019 /* UserProfileSetupView.swift in Sources */,
 				A10020 /* ProfileDetailView.swift in Sources */,
+				A10021 /* EnergyCalculator.swift in Sources */,
+				A10022 /* EnergyCardView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

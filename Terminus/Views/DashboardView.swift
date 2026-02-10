@@ -5,6 +5,7 @@ struct DashboardView: View {
     @EnvironmentObject var monitor: UsageMonitorViewModel
     @EnvironmentObject var appState: AppState
     @ObservedObject private var dataStore = UsageDataStore.shared
+    @ObservedObject private var energyCalc = EnergyCalculator.shared
     @State private var showAnalysis = false
     @State private var showProfileSetup = false
 
@@ -19,6 +20,9 @@ struct DashboardView: View {
 
                     // Wellness Score Card
                     wellnessScoreCard
+
+                    // Energy Level (auto-updates)
+                    EnergyCardView(calculator: energyCalc)
 
                     // Today's Screen Time
                     screenTimeCard
@@ -37,6 +41,12 @@ struct DashboardView: View {
                     // AI Quick Tip
                     if !monitor.aiAdvice.isEmpty {
                         aiAdviceCard
+                    }
+
+                    // Energy Tips
+                    let energyTips = energyCalc.generateTips()
+                    if !energyTips.isEmpty {
+                        EnergyCompactCard(energy: energyCalc.currentEnergy, tips: energyTips)
                     }
 
                     // Analyze Button
