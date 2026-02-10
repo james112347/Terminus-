@@ -1,0 +1,62 @@
+name: Build Terminus iOS
+
+on:
+  push:
+    branches: [ main, 'claude/*' ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build iOS App
+    runs-on: macos-14
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select Xcode 16
+        run: sudo xcode-select -s /Applications/Xcode_16.0.app/Contents/Developer
+
+      - name: Show Xcode version
+        run: xcodebuild -version
+
+      - name: Build for iOS Simulator (verification)
+        run: |
+          xcodebuild build \
+            -project Terminus.xcodeproj \
+            -scheme Terminus \
+            -destination 'platform=iOS Simulator,name=iPhone 16 Pro,OS=18.0' \
+            -configuration Debug \
+            CODE_SIGNING_ALLOWED=NO \
+            | tail -20
+
+      - name: Archive for device (unsigned IPA)
+        run: |
+          xcodebuild archive \
+            -project Terminus.xcodeproj \
+            -scheme Terminus \
+            -archivePath build/Terminus.xcarchive \
+            -destination 'generic/platform=iOS' \
+            -configuration Release \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            AD_HOC_CODE_SIGNING_ALLOWED=YES \
+            | tail -20
+
+      - name: Create IPA from archive
+        run: |
+          mkdir -p build/Payload
+          cp -r build/Terminus.xcarchive/Products/Applications/Terminus.app build/Payload/
+          cd build
+          zip -r Terminus.ipa Payload/
+          ls -la Terminus.ipa
+
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Terminus-iOS
+          path: build/Terminus.ipa
+          retention-days: 30
