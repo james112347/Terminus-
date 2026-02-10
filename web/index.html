@@ -835,6 +835,19 @@ input[type="range"]::-webkit-slider-thumb {
           <option value="part-time">Part-time</option>
           <option value="non-lavoro">Non lavoro</option>
         </select>
+        <div class="profile-field" style="margin-top:10px"><span class="profile-field-label">Tipo di lavoro</span></div>
+        <div class="profile-chips" id="profile-worktype">
+          <div class="profile-chip" data-val="mentale" onclick="profileChipSelect('profile-worktype',this); updateWorkFeedback()">Mentale</div>
+          <div class="profile-chip" data-val="fisico" onclick="profileChipSelect('profile-worktype',this); updateWorkFeedback()">Fisico</div>
+          <div class="profile-chip selected" data-val="misto" onclick="profileChipSelect('profile-worktype',this); updateWorkFeedback()">Fisico + Mentale</div>
+          <div class="profile-chip" data-val="leggero" onclick="profileChipSelect('profile-worktype',this); updateWorkFeedback()">Leggero/Sedentario</div>
+        </div>
+        <div class="profile-field" style="margin-top:12px"><span class="profile-field-label">A che ora finisci di lavorare?</span></div>
+        <div class="profile-slider-row">
+          <input type="range" id="profile-workend" min="6" max="24" step="0.25" value="18" oninput="updateWorkEndDisplay()">
+          <span class="profile-slider-val" id="profile-workend-val">18:00</span>
+        </div>
+        <div id="profile-work-feedback"></div>
       </div>
 
       <!-- Sleep -->
@@ -1960,7 +1973,10 @@ function calculateEnergy(report) {
     }
 
     // 9. RITMO CIRCADIANO → basato su ora + bedtime
-    const curHour = Number(ctx.currentHour) || new Date().getHours();
+    const now = new Date();
+    const curHour = Number(ctx.currentHour) || now.getHours();
+    const curMinFrac = now.getMinutes() / 60;
+    const curExact = curHour + curMinFrac;
     const hoursUntilBed = Number(ctx.hoursUntilBed) || 8;
     let circadianMult = 1.0;
     if (curHour >= 22 || curHour < 6) circadianMult = 1.15;
@@ -1980,9 +1996,41 @@ function calculateEnergy(report) {
       else if (bedH >= 24) bedtimePenalty = 6; // wrapped past midnight
     }
 
+    // 11. FATICA LAVORATIVA → drain basato su tipo lavoro e ore dalla fine turno
+    // Il lavoro fisico+mentale drena piu energia, l'effetto diminuisce col recupero
+    let workFatigue = 0;
+    if (prof.workType && prof.workEndTime != null) {
+      const hoursSinceWork = curExact - prof.workEndTime;
+      if (hoursSinceWork >= -0.5 && hoursSinceWork < 6) {
+        // Intensita base per tipo lavoro
+        const workIntensity = { 'fisico': 14, 'misto': 16, 'mentale': 10, 'leggero': 4 };
+        const baseWork = workIntensity[prof.workType] || 8;
+        // Ore lavorate (da sveglia a fine turno - 1h preparazione)
+        const workHours = (prof.workEndTime || 18) - (prof.wakeTime || 7) - 1;
+        const longShiftBonus = workHours > 9 ? Math.min(6, (workHours - 9) * 2) : 0;
+        // Recupero: la fatica diminuisce esponenzialmente dopo la fine del turno
+        const recoveryFactor = hoursSinceWork <= 0 ? 1.0 : Math.exp(-hoursSinceWork * 0.4);
+        workFatigue = (baseWork + longShiftBonus) * recoveryFactor;
+      }
+    }
+
+    // 12. PROGRESSIONE TEMPORALE → l'energia cala naturalmente durante il giorno
+    // Modello: il cervello consuma ~20% dell'energia totale, la fatica si accumula
+    // linearmente dalle ore sveglio. Picco negativo la sera, recupero con sonno.
+    const wakeH = prof.wakeTime || 7;
+    let hoursAwake = curExact - wakeH;
+    if (hoursAwake < 0) hoursAwake += 24;
+    // Curva: 0 a sveglia, cresce linearmente con un ginocchio dopo 12h
+    let timeDrain = 0;
+    if (hoursAwake <= 4) timeDrain = hoursAwake * 0.5;        // mattina: -0.5/h
+    else if (hoursAwake <= 8) timeDrain = 2 + (hoursAwake - 4) * 1.0;  // pomeriggio: -1/h
+    else if (hoursAwake <= 12) timeDrain = 6 + (hoursAwake - 8) * 1.8; // sera: -1.8/h
+    else if (hoursAwake <= 16) timeDrain = 13.2 + (hoursAwake - 12) * 2.5; // notte: -2.5/h
+    else timeDrain = 23.2 + (hoursAwake - 16) * 3; // esaurimento
+
     // Calcolo finale
     const startEnergy = Math.min(100, baseline + activityBonus + hydrationBonus);
-    const totalDrain = (durationDrain + contentDrain + fragmentDrain + goalDrain + bedtimePenalty) * stressMultiplier * circadianMult;
+    const totalDrain = (durationDrain + contentDrain + fragmentDrain + goalDrain + bedtimePenalty + workFatigue + timeDrain) * stressMultiplier * circadianMult;
     const energy = startEnergy - totalDrain;
 
     const result = Math.round(Math.max(0, Math.min(100, energy)));
@@ -1994,9 +2042,15 @@ function calculateEnergy(report) {
 
 function getEnergyBreakdown(report) {
   const ctx = report.context || {};
+  const prof = state.profile || {};
   const totalMin = Number(report.totalMinutes) || 0;
   const goalMin = Number(report.goal) || state.goal || 120;
-  const sleep = Number(ctx.sleepHours) || 7;
+  let sleep = Number(ctx.sleepHours);
+  if (!sleep && prof.wakeTime != null && prof.bedTime != null) {
+    const pBed = prof.bedTime >= 24 ? prof.bedTime - 24 : prof.bedTime;
+    sleep = prof.wakeTime <= pBed ? (24 - pBed + prof.wakeTime) : (prof.wakeTime - pBed);
+  }
+  if (!sleep) sleep = 7;
   let baseline;
   if (sleep <= 3) baseline = 35; else if (sleep <= 4) baseline = 48;
   else if (sleep <= 5) baseline = 60; else if (sleep <= 6) baseline = 73;
@@ -2028,7 +2082,40 @@ function getEnergyBreakdown(report) {
   }
   const bedLabel = !isNaN(bedH) ? (String(Math.floor(bedH >= 24 ? bedH-24 : bedH)).padStart(2,'0')+':'+(bedH%1===0.5?'30':'00')) : null;
   const hoursUntilBed = Number(ctx.hoursUntilBed) || null;
-  return { startE, baseline, actBonus, hydBonus, hydLabel, dDrain, cDrain, fDrain, gDrain, bDrain, bedLabel, hoursUntilBed, stressL, stressM, sleep, totalMin, goalMin };
+
+  // Work fatigue breakdown
+  let wDrain = 0;
+  let workLabel = null;
+  if (prof.workType && prof.workEndTime != null) {
+    const now = new Date();
+    const curExact = now.getHours() + now.getMinutes() / 60;
+    const hoursSinceWork = curExact - prof.workEndTime;
+    if (hoursSinceWork >= -0.5 && hoursSinceWork < 6) {
+      const workIntensity = { 'fisico': 14, 'misto': 16, 'mentale': 10, 'leggero': 4 };
+      const baseWork = workIntensity[prof.workType] || 8;
+      const workHours = (prof.workEndTime || 18) - (prof.wakeTime || 7) - 1;
+      const longShiftBonus = workHours > 9 ? Math.min(6, (workHours - 9) * 2) : 0;
+      const recoveryFactor = hoursSinceWork <= 0 ? 1.0 : Math.exp(-hoursSinceWork * 0.4);
+      wDrain = Math.round((baseWork + longShiftBonus) * recoveryFactor);
+      const wtLabels = { 'fisico': 'Fisico', 'misto': 'Fis+Ment', 'mentale': 'Mentale', 'leggero': 'Leggero' };
+      workLabel = wtLabels[prof.workType] || 'Lavoro';
+    }
+  }
+
+  // Time progression breakdown
+  const wakeH = prof.wakeTime || 7;
+  const nowH = new Date().getHours() + new Date().getMinutes() / 60;
+  let hoursAwake = nowH - wakeH;
+  if (hoursAwake < 0) hoursAwake += 24;
+  let tDrain = 0;
+  if (hoursAwake <= 4) tDrain = Math.round(hoursAwake * 0.5);
+  else if (hoursAwake <= 8) tDrain = Math.round(2 + (hoursAwake - 4) * 1.0);
+  else if (hoursAwake <= 12) tDrain = Math.round(6 + (hoursAwake - 8) * 1.8);
+  else if (hoursAwake <= 16) tDrain = Math.round(13.2 + (hoursAwake - 12) * 2.5);
+  else tDrain = Math.round(23.2 + (hoursAwake - 16) * 3);
+  const awakeLabel = Math.round(hoursAwake) + 'h sveglio';
+
+  return { startE, baseline, actBonus, hydBonus, hydLabel, dDrain, cDrain, fDrain, gDrain, bDrain, bedLabel, hoursUntilBed, stressL, stressM, sleep, totalMin, goalMin, wDrain, workLabel, tDrain, awakeLabel };
 }
 
 function buildEnergyFactorsHTML(report) {
@@ -2042,6 +2129,8 @@ function buildEnergyFactorsHTML(report) {
     <div class="energy-factor"><div class="energy-factor-dot" style="background:#f0883e"></div>Interruzioni: -${b.fDrain}</div>
     <div class="energy-factor"><div class="energy-factor-dot" style="background:${b.totalMin > b.goalMin ? '#e74c6f' : '#26c281'}"></div>Obiettivo: ${b.totalMin > b.goalMin ? '-'+b.gDrain : '+bonus'}</div>
     ${b.bDrain > 0 ? `<div class="energy-factor"><div class="energy-factor-dot" style="background:#6c5ce7"></div>Bedtime ${b.bedLabel}: -${b.bDrain}</div>` : ''}
+    ${b.wDrain > 0 ? `<div class="energy-factor"><div class="energy-factor-dot" style="background:#f4b740"></div>Lavoro ${b.workLabel}: -${b.wDrain}</div>` : ''}
+    <div class="energy-factor"><div class="energy-factor-dot" style="background:#8b95a5"></div>${b.awakeLabel}: -${b.tDrain}</div>
     ${b.stressM !== 1.0 ? `<div class="energy-factor"><div class="energy-factor-dot" style="background:#e84393"></div>Stress ${b.stressL}: x${b.stressM}</div>` : ''}
   `;
 }
@@ -2182,6 +2271,43 @@ function updateProfilePreview() {
   }
 }
 
+function updateWorkEndDisplay() {
+  const val = parseFloat(document.getElementById('profile-workend').value);
+  const hh = Math.floor(val);
+  const mm = Math.round((val - hh) * 60);
+  document.getElementById('profile-workend-val').textContent = String(hh).padStart(2,'0') + ':' + String(mm).padStart(2,'0');
+  updateWorkFeedback();
+}
+
+function updateWorkFeedback() {
+  const workType = getSelectedChip('profile-worktype');
+  const workEnd = parseFloat(document.getElementById('profile-workend').value);
+  const feedbackEl = document.getElementById('profile-work-feedback');
+
+  if (!workType || workType === 'leggero') { feedbackEl.innerHTML = ''; return; }
+
+  const wakeTime = parseInt(document.getElementById('profile-wake').value) || 7;
+  const workHours = workEnd - wakeTime - 1; // circa 1h per prepararsi/tragitto
+
+  let fb = '';
+  if (workType === 'fisico' || workType === 'misto') {
+    if (workEnd >= 20) {
+      fb = `<div class="profile-feedback negative">Finisci di lavorare tardi (${Math.floor(workEnd)}:00) con un lavoro ${workType === 'misto' ? 'fisico e mentale' : 'fisico'}. Dopo ${Math.round(workHours)}h di sforzo il corpo rilascia cortisolo e le riserve di glicogeno muscolare si esauriscono: l'uso dello schermo in questo stato accelera l'esaurimento cognitivo del 40%.</div>`;
+    } else if (workHours >= 10) {
+      fb = `<div class="profile-feedback negative">Giornata lavorativa lunga (~${Math.round(workHours)}h). Il lavoro fisico prolungato riduce il BDNF cerebrale e la capacita decisionale. Il telefono dopo sara piu "addictive" perche il cervello cerca stimoli facili.</div>`;
+    } else {
+      fb = `<div class="profile-feedback positive">Il lavoro fisico brucia energia ma migliora il sonno. Dopo il turno, 20 min di decompressione senza schermo ottimizzano il recupero.</div>`;
+    }
+  } else if (workType === 'mentale') {
+    if (workEnd >= 20) {
+      fb = `<div class="profile-feedback negative">Lavoro mentale fino a tardi: la corteccia prefrontale si affatica dopo 8+ ore di concentrazione. La "willpower depletion" rende piu difficile resistere allo scrolling compulsivo serale.</div>`;
+    } else if (workHours >= 10) {
+      fb = `<div class="profile-feedback negative">~${Math.round(workHours)}h di lavoro mentale: il "decision fatigue" si accumula. Dopo il lavoro avrai meno autocontrollo sulle abitudini digitali.</div>`;
+    }
+  }
+  feedbackEl.innerHTML = fb;
+}
+
 function updateSleepProfile() {
   const wake = parseInt(document.getElementById('profile-wake').value);
   const bed = parseInt(document.getElementById('profile-bed').value);
@@ -2250,6 +2376,8 @@ function saveProfile() {
     age: document.getElementById('profile-age').value,
     occupation: document.getElementById('profile-occupation').value,
     schedule: document.getElementById('profile-schedule').value,
+    workType: getSelectedChip('profile-worktype'),
+    workEndTime: parseFloat(document.getElementById('profile-workend').value),
     wakeTime: parseInt(document.getElementById('profile-wake').value),
     bedTime: parseInt(document.getElementById('profile-bed').value),
     chronotype: getSelectedChip('profile-chronotype'),
@@ -2303,6 +2431,19 @@ function showProfileFeedbackSummary(profile) {
     items.push({positive: true, text: `Attivita fisica regolare: +23% di funzioni esecutive e migliore regolazione emotiva.`});
   }
 
+  // Work fatigue
+  if (profile.workType && profile.workEndTime) {
+    const workHours = (profile.workEndTime || 18) - (profile.wakeTime || 7) - 1;
+    const wtLabels = { 'fisico': 'fisico', 'misto': 'fisico e mentale', 'mentale': 'mentale', 'leggero': 'leggero' };
+    if ((profile.workType === 'fisico' || profile.workType === 'misto') && profile.workEndTime >= 20) {
+      items.push({positive: false, text: `Lavoro ${wtLabels[profile.workType]} fino alle ${Math.floor(profile.workEndTime)}:00 (~${Math.round(workHours)}h). Il corpo post-turno ha cortisolo elevato e glicogeno esaurito: l'energia serale sara molto bassa e lo schermo amplifica la stanchezza.`});
+    } else if (workHours >= 10) {
+      items.push({positive: false, text: `Giornata lavorativa di ~${Math.round(workHours)}h (${wtLabels[profile.workType]}). Turni lunghi riducono la willpower del 40%: il telefono diventa piu addictive dopo il lavoro.`});
+    } else if (profile.workType === 'misto' || profile.workType === 'fisico') {
+      items.push({positive: true, text: `Lavoro ${wtLabels[profile.workType]}: l'attivita durante il giorno migliora la qualita del sonno. L'energia calera dopo il turno ma il recupero e piu rapido.`});
+    }
+  }
+
   // Stress
   if (profile.stress === 'alto' || profile.stress === 'molto-alto') {
     items.push({positive: false, text: `Stress elevato: il cortisolo cronico riduce l'ippocampo (memoria) e amplifica la ricerca compulsiva di distrazioni digitali.`});
@@ -2342,6 +2483,7 @@ function loadProfile() {
   // Sliders
   if (p.wakeTime != null) document.getElementById('profile-wake').value = p.wakeTime;
   if (p.bedTime != null) document.getElementById('profile-bed').value = p.bedTime;
+  if (p.workEndTime != null) document.getElementById('profile-workend').value = p.workEndTime;
 
   // Single-select chips
   const chipGroups = {
@@ -2349,7 +2491,8 @@ function loadProfile() {
     'profile-social': p.social,
     'profile-activity': p.activity,
     'profile-stress': p.stress,
-    'profile-personality': p.personality
+    'profile-personality': p.personality,
+    'profile-worktype': p.workType
   };
   for (const [groupId, val] of Object.entries(chipGroups)) {
     if (val) {
@@ -2372,6 +2515,8 @@ function loadProfile() {
   }
 
   // Update displays
+  updateWorkEndDisplay();
+  updateWorkFeedback();
   updateSleepProfile();
   updateProfilePreview();
   updateProfileFeedback();
@@ -2385,16 +2530,27 @@ function getProfileContext() {
   const bed = p.bedTime >= 24 ? p.bedTime - 24 : p.bedTime;
   const sleepH = p.wakeTime <= bed ? (24 - bed + p.wakeTime) : (p.wakeTime - bed);
 
+  const workTypeLabels = { 'mentale': 'mentale', 'fisico': 'fisico', 'misto': 'fisico e mentale', 'leggero': 'leggero/sedentario' };
+  const workEndHH = Math.floor(p.workEndTime || 18);
+  const workEndMM = Math.round(((p.workEndTime || 18) - workEndHH) * 60);
+  const workEndStr = String(workEndHH).padStart(2,'0') + ':' + String(workEndMM).padStart(2,'0');
+  const now = new Date();
+  const curH = now.getHours() + now.getMinutes() / 60;
+  const hoursSinceWork = curH - (p.workEndTime || 18);
+
   let ctx = `\nPROFILO UTENTE:`;
   if (p.name) ctx += ` Nome: ${p.name}.`;
   ctx += ` Eta: ${p.age}.`;
-  ctx += ` Occupazione: ${p.occupation} (${p.schedule}).`;
+  ctx += ` Occupazione: ${p.occupation} (${p.schedule}), lavoro ${workTypeLabels[p.workType] || 'misto'}, finisce alle ${workEndStr}.`;
+  if (hoursSinceWork >= 0 && hoursSinceWork < 8) {
+    ctx += ` Ha finito di lavorare ${hoursSinceWork < 1 ? 'da poco' : 'da circa ' + Math.round(hoursSinceWork) + 'h'}. Dopo un lavoro ${workTypeLabels[p.workType] || 'misto'} l'energia residua e ridotta.`;
+  }
   ctx += ` Sonno tipico: ${sleepH}h (sveglia ${p.wakeTime}:00, letto ${String(bed).padStart(2,'0')}:00), cronotipo ${p.chronotype}.`;
   ctx += ` Vive: ${p.social}. Attivita fisica: ${p.activity}. Stress: ${p.stress}. Personalita: ${p.personality}.`;
-  if (p.digitalHabits.length > 0) ctx += ` Abitudini digitali: ${p.digitalHabits.join(', ')}.`;
-  if (p.goals.length > 0) ctx += ` Obiettivi: ${p.goals.join(', ')}.`;
-  if (p.hobbies.length > 0) ctx += ` Hobby offline: ${p.hobbies.join(', ')}.`;
-  ctx += `\nUSA QUESTE INFO per personalizzare i consigli: suggerisci hobby specifici dell'utente come alternative, adatta il linguaggio all'eta, considera lo stress e l'occupazione nei consigli, e focalizza sugli obiettivi dichiarati.`;
+  if (p.digitalHabits && p.digitalHabits.length > 0) ctx += ` Abitudini digitali: ${p.digitalHabits.join(', ')}.`;
+  if (p.goals && p.goals.length > 0) ctx += ` Obiettivi: ${p.goals.join(', ')}.`;
+  if (p.hobbies && p.hobbies.length > 0) ctx += ` Hobby offline: ${p.hobbies.join(', ')}.`;
+  ctx += `\nUSA QUESTE INFO per personalizzare i consigli: considera il tipo di lavoro e l'orario di fine turno (se ha appena finito un lavoro fisico/mentale pesante, suggerisci recupero attivo prima dello schermo). Suggerisci hobby specifici dell'utente come alternative, adatta il linguaggio all'eta, considera lo stress e l'occupazione nei consigli, e focalizza sugli obiettivi dichiarati.`;
 
   return ctx;
 }
@@ -2552,6 +2708,33 @@ function updateAIStatus() {
 }
 
 // ============ INITIALIZATION ============
+// ============ LIVE ENERGY UPDATE ============
+// Aggiorna l'energia in tempo reale ogni 60 secondi basandosi sull'ora
+function refreshDashboardEnergy() {
+  if (!state.latestReport) return;
+  try {
+    const report = state.latestReport;
+    const energy = calculateEnergy(report);
+    const eColor = energyColor(energy);
+    const startColor = energy > 50 ? '#26c281' : '#f0883e';
+
+    document.getElementById('energy-val').textContent = energy;
+    document.getElementById('energy-val').style.color = eColor;
+    document.getElementById('energy-label').textContent = energyLabel(energy);
+    document.getElementById('energy-label').style.color = eColor;
+    document.getElementById('energy-percent').textContent = energy + '%';
+    const bar = document.getElementById('energy-bar');
+    bar.style.width = energy + '%';
+    bar.style.background = `linear-gradient(90deg, ${startColor}, ${eColor})`;
+
+    // Update factors
+    document.getElementById('energy-factors').innerHTML = buildEnergyFactorsHTML(report);
+
+    // Update stored energy for consistency
+    report.energy = energy;
+  } catch(e) { /* silent */ }
+}
+
 function init() {
   Storage.load();
   const savedKey = Storage.loadKey();
@@ -2574,6 +2757,9 @@ function init() {
     updateDashboard(state.latestReport);
   }
   updateHistory();
+
+  // Auto-refresh energy every 60 seconds (progresses with time)
+  setInterval(refreshDashboardEnergy, 60000);
 
   // Close modals on overlay click
   document.getElementById('detail-modal').addEventListener('click', function(e) {
