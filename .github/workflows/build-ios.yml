@@ -37,8 +37,12 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             COMPILER_INDEX_STORE_ENABLE=NO \
             2>&1 | tee /tmp/xcodebuild.log
-          echo "Build completed with exit code: ${PIPESTATUS[0]}"
-          exit ${PIPESTATUS[0]}
+          BUILD_EXIT=${PIPESTATUS[0]}
+          echo "Build exit code: $BUILD_EXIT"
+          if [ $BUILD_EXIT -ne 0 ]; then
+            echo "BUILD FAILED"
+            exit $BUILD_EXIT
+          fi
 
       - name: Show build errors
         if: failure()
@@ -49,19 +53,43 @@ jobs:
           echo "========== LAST 100 LINES =========="
           tail -100 /tmp/xcodebuild.log 2>/dev/null || true
 
-      - name: Package IPA
+      - name: Verify and Package IPA
         run: |
+          echo "=== Searching for .app ==="
+          find "$PWD/build" -name "*.app" -type d 2>/dev/null
+
           APP_PATH=$(find "$PWD/build" -name "Terminus.app" -type d 2>/dev/null | head -1)
           if [ -z "$APP_PATH" ]; then
             echo "ERROR: Terminus.app not found"
             find "$PWD/build" -type d -maxdepth 5 2>/dev/null
             exit 1
           fi
-          echo "Found: $APP_PATH"
+
+          echo ""
+          echo "=== .app contents ==="
+          ls -lhR "$APP_PATH/"
+          echo ""
+          echo "=== .app total size ==="
+          du -sh "$APP_PATH"
+          echo ""
+
+          # Verify the binary exists
+          BINARY="$APP_PATH/Terminus"
+          if [ ! -f "$BINARY" ]; then
+            echo "WARNING: Binary not found at $BINARY"
+            echo "Looking for any executable files..."
+            find "$APP_PATH" -type f -perm +111 2>/dev/null || find "$APP_PATH" -type f -executable 2>/dev/null || true
+          else
+            echo "Binary found: $(ls -lh "$BINARY")"
+            file "$BINARY"
+          fi
+
           mkdir -p build/Payload
           cp -r "$APP_PATH" build/Payload/
           cd build
           zip -r Terminus.ipa Payload/
+          echo ""
+          echo "=== Final IPA size ==="
           ls -lh Terminus.ipa
 
       - name: Upload IPA
