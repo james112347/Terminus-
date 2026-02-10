@@ -61,6 +61,7 @@ body.dark .header { background: rgba(13,13,20,0.85); }
 body.dark .tabbar { background: rgba(13,13,20,0.92); }
 body.dark .modal-overlay { background: rgba(0,0,0,0.6); }
 body.dark input[type="range"]::-webkit-slider-thumb { background: var(--accent); }
+body.dark .energy-warning.moderate { color: #f4b740; }
 
 * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
 body {
@@ -463,6 +464,69 @@ input[type="range"]::-webkit-slider-thumb {
 }
 .energy-factor-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
 
+/* Energy Warning */
+.energy-warning {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 14px; border-radius: 12px;
+  margin-top: 14px; font-size: 12px; line-height: 1.5;
+  font-weight: 600; animation: warningFadeIn 0.5s ease;
+}
+.energy-warning.critical {
+  background: rgba(231,76,111,0.1); border: 1px solid rgba(231,76,111,0.2);
+  color: #e74c6f;
+}
+.energy-warning.low {
+  background: rgba(240,136,62,0.1); border: 1px solid rgba(240,136,62,0.2);
+  color: #f0883e;
+}
+.energy-warning.moderate {
+  background: rgba(244,183,64,0.1); border: 1px solid rgba(244,183,64,0.18);
+  color: #c4940a;
+}
+.energy-warning-icon {
+  font-size: 20px; flex-shrink: 0; line-height: 1;
+}
+@keyframes warningFadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes warningPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+.energy-warning.critical .energy-warning-icon {
+  animation: warningPulse 2s ease-in-out infinite;
+}
+
+/* Energy Tips */
+.energy-tips {
+  margin-top: 14px; display: flex; flex-direction: column; gap: 8px;
+}
+.energy-tips-title {
+  font-size: 11px; font-weight: 700; color: var(--text3);
+  text-transform: uppercase; letter-spacing: 0.5px;
+  margin-bottom: 2px;
+}
+.energy-tip {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 10px 12px; border-radius: 10px;
+  background: var(--bg3); font-size: 12px;
+  color: var(--text2); line-height: 1.55; font-weight: 500;
+  animation: tipSlideIn 0.4s ease;
+}
+.energy-tip-icon {
+  font-size: 14px; flex-shrink: 0; margin-top: 1px; line-height: 1;
+}
+.energy-tip-text { flex: 1; }
+.energy-tip.priority {
+  background: rgba(108,92,231,0.08); border: 1px solid rgba(108,92,231,0.12);
+  color: var(--text); font-weight: 600;
+}
+@keyframes tipSlideIn {
+  from { opacity: 0; transform: translateX(-8px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
 /* Error */
 .error-msg {
   background: rgba(231,76,111,0.06);
@@ -565,6 +629,8 @@ input[type="range"]::-webkit-slider-thumb {
           <div class="energy-bar-fill" id="energy-bar" style="width:0%"></div>
         </div>
         <div class="energy-factors" id="energy-factors"></div>
+        <div id="energy-warnings"></div>
+        <div id="energy-tips"></div>
       </div>
 
       <!-- Today's Work -->
@@ -1883,6 +1949,10 @@ function updateDashboard(report) {
 
     // Energy breakdown factors
     document.getElementById('energy-factors').innerHTML = buildEnergyFactorsHTML(report);
+
+    // Energy warnings and recovery tips
+    document.getElementById('energy-warnings').innerHTML = buildEnergyWarningsHTML(report);
+    document.getElementById('energy-tips').innerHTML = buildEnergyTipsHTML(report);
   } catch(e) { /* energy card fallback */ }
 
   // Stats
@@ -2333,6 +2403,209 @@ function energyColor(e) {
   if (e >= 45) return '#f4b740';
   if (e >= 25) return '#f0883e';
   return '#e74c6f';
+}
+
+// ============ ENERGY RECOVERY TIPS & WARNINGS ============
+function getEnergyWarnings(energy, report) {
+  const warnings = [];
+  const b = getEnergyBreakdown(report);
+  const ew = getEffectiveWork();
+  const now = new Date();
+  const curH = now.getHours() + now.getMinutes() / 60;
+  const ctx = report.context || state.context || {};
+  const hoursLeft = Number(ctx.hoursUntilBed) || null;
+
+  // Critical energy warning
+  if (energy < 20) {
+    warnings.push({
+      level: 'critical',
+      icon: '\u26A0\uFE0F',
+      text: `Energia critica (${energy}%). Il tuo corpo e la tua mente hanno bisogno di recupero immediato. Interrompi le attivita impegnative e riposa.`
+    });
+  } else if (energy < 40) {
+    warnings.push({
+      level: 'low',
+      icon: '\u26A1',
+      text: `Energia bassa (${energy}%). Rischi calo di concentrazione, irritabilita e decisioni impulsive. Agisci ora per recuperare.`
+    });
+  }
+
+  // Work fatigue during shift
+  if (ew) {
+    if (curH >= ew.start && curH <= ew.end) {
+      const hoursWorked = curH - ew.start;
+      const hoursRemaining = ew.end - curH;
+      if (hoursWorked > 6 && energy < 50) {
+        warnings.push({
+          level: 'moderate',
+          icon: '\uD83C\uDFED',
+          text: `Stai lavorando da ${Math.round(hoursWorked)}h con energia moderata. Fai una pausa di 10-15 min per mantenere la produttivita.`
+        });
+      }
+    }
+  }
+
+  // Late night + low energy
+  if (hoursLeft !== null && hoursLeft < 1.5 && energy < 45) {
+    warnings.push({
+      level: 'moderate',
+      icon: '\uD83C\uDF19',
+      text: 'Manca poco a dormire. Evita schermi luminosi: la luce blu blocca la melatonina e compromette il sonno profondo.'
+    });
+  }
+
+  // Very long awake time
+  const prof = state.profile || {};
+  const wakeH = prof.wakeTime || 7;
+  let hoursAwake = curH - wakeH;
+  if (hoursAwake < 0) hoursAwake += 24;
+  if (hoursAwake >= 16 && energy < 35) {
+    warnings.push({
+      level: 'low',
+      icon: '\u23F0',
+      text: `Sei sveglio da ${Math.round(hoursAwake)}h. Dopo 16h di veglia le capacita cognitive calano quanto 0.05% di alcol nel sangue.`
+    });
+  }
+
+  return warnings.slice(0, 2);
+}
+
+function getEnergyRecoveryTips(energy, report) {
+  const tips = [];
+  const b = getEnergyBreakdown(report);
+  const ctx = report.context || state.context || {};
+  const prof = state.profile || {};
+  const ew = getEffectiveWork();
+  const now = new Date();
+  const curH = now.getHours() + now.getMinutes() / 60;
+  const hoursLeft = Number(ctx.hoursUntilBed) || null;
+  const sleep = b.sleep;
+  const hydVal = Number(ctx.hydration) || 1;
+  const actVal = Number(ctx.activity) || 0;
+  const stressVal = Number(ctx.stress) || 1;
+  const wakeH = prof.wakeTime || 7;
+  let hoursAwake = curH - wakeH;
+  if (hoursAwake < 0) hoursAwake += 24;
+
+  // Work context
+  let isWorking = false;
+  let postWork = false;
+  let hoursSinceWork = 0;
+  if (ew) {
+    isWorking = curH >= ew.start && curH <= ew.end;
+    hoursSinceWork = curH - ew.end;
+    postWork = hoursSinceWork >= 0 && hoursSinceWork < 6;
+  }
+
+  // ========= ENERGY 80-100%: Maintenance =========
+  if (energy >= 80) {
+    tips.push({ icon: '\u2728', text: 'Energia ottimale. Questo e il momento migliore per attivita che richiedono concentrazione e creativita.', priority: false });
+    if (hydVal < 2) tips.push({ icon: '\uD83D\uDCA7', text: 'Mantieni l\'idratazione costante per restare al massimo. Obiettivo: un bicchiere ogni 45-60 min.', priority: false });
+    if (actVal === 0) tips.push({ icon: '\uD83C\uDFC3', text: 'Attivita fisica previene il calo pomeridiano. Anche 20 min di camminata mantengono l\'energia alta piu a lungo.', priority: false });
+    if (hoursLeft && hoursLeft < 4) tips.push({ icon: '\uD83C\uDF1F', text: 'Energia alta ma si avvicina la sera. Inizia a ridurre la luminosita degli schermi per favorire il riposo.', priority: false });
+
+  // ========= ENERGY 60-79%: Prevention =========
+  } else if (energy >= 60) {
+    if (isWorking) {
+      tips.push({ icon: '\u2615', text: 'Energia buona durante il lavoro. Fai micro-pause di 2-3 min ogni ora per mantenere la produttivita costante.', priority: false });
+    }
+    if (hydVal <= 1) tips.push({ icon: '\uD83D\uDCA7', text: 'Bevi piu acqua. La disidratazione anche lieve (-2%) riduce attenzione e memoria a breve termine del 15%.', priority: true });
+    if (b.dDrain > 15) tips.push({ icon: '\uD83D\uDCF1', text: 'Uso schermo elevato. Alterna 25 min di schermo con 5 min di pausa (tecnica Pomodoro) per ridurre l\'affaticamento visivo.', priority: false });
+    if (stressVal >= 2) tips.push({ icon: '\uD83E\uDDD8', text: 'Stress alto accelera il consumo energetico. Prova box breathing: inspira 4s, trattieni 4s, espira 4s, pausa 4s.', priority: true });
+    if (actVal === 0 && !isWorking) tips.push({ icon: '\uD83D\uDEB6', text: 'Fare 10 min di camminata ora puo darti un boost di 1-2h di energia mentale. Il movimento aumenta il flusso sanguigno cerebrale del 15%.', priority: false });
+    if (sleep < 6.5) tips.push({ icon: '\uD83D\uDE34', text: `Solo ${sleep}h di sonno. Stasera vai a letto 30-60 min prima. Il debito di sonno si accumula e peggiora giorno dopo giorno.`, priority: false });
+
+  // ========= ENERGY 40-59%: Active Recovery =========
+  } else if (energy >= 40) {
+    tips.push({ icon: '\uD83D\uDD04', text: 'Energia in calo. Attiva il recupero: pausa schermo, acqua, luce naturale. Anche 5 min fanno differenza.', priority: true });
+    if (postWork) {
+      const wLabels = { fisico: 'fisico', mentale: 'mentale', misto: 'fisico e mentale', leggero: 'leggero' };
+      tips.push({ icon: '\uD83C\uDFED', text: `Stai recuperando dal lavoro ${wLabels[ew.type] || ''}. Il recupero post-lavoro richiede 2-3h. Evita attivita impegnative e prediligi riposo attivo.`, priority: true });
+    }
+    if (isWorking) {
+      tips.push({ icon: '\u23F1\uFE0F', text: 'Sei al lavoro con energia moderata. Fai una pausa pranzo di almeno 15 min lontano dallo schermo. Mangia proteine e carboidrati complessi.', priority: true });
+    }
+    if (hydVal <= 1) tips.push({ icon: '\uD83D\uDCA7', text: 'Bevi subito un bicchiere d\'acqua grande. La reidratazione puo migliorare l\'energia percepita in 15-20 min.', priority: true });
+    if (stressVal >= 2) tips.push({ icon: '\uD83C\uDF3F', text: 'Stress + energia moderata = rischio burnout. Fai 5 min di respirazione 4-7-8 (inspira 4s, trattieni 7s, espira 8s).', priority: true });
+    if (b.dDrain > 20) tips.push({ icon: '\uD83D\uDCF5', text: 'Troppo tempo allo schermo. Metti il telefono in un\'altra stanza per 30 min. La distanza fisica riduce la tentazione dell\'80%.', priority: false });
+    if (hoursLeft && hoursLeft > 4 && energy < 50) tips.push({ icon: '\u2600\uFE0F', text: 'Hai ancora ore davanti. 10 min di esposizione alla luce naturale ora possono resettare il tuo orologio biologico e darti una spinta.', priority: false });
+    if (hoursAwake > 12) tips.push({ icon: '\uD83D\uDECB\uFE0F', text: `${Math.round(hoursAwake)}h di veglia. Se possibile, un power nap di 15-20 min (non di piu!) puo restituirti 1-2h di lucidita.`, priority: false });
+
+  // ========= ENERGY 20-39%: Urgent Recovery =========
+  } else if (energy >= 20) {
+    tips.push({ icon: '\uD83D\uDEA8', text: 'Energia bassa. La capacita decisionale e compromessa. Evita decisioni importanti e concentrati su attivita semplici e di routine.', priority: true });
+    tips.push({ icon: '\uD83D\uDCA7', text: 'Bevi almeno 500ml d\'acqua nei prossimi 30 min. La disidratazione amplifica la stanchezza fino al 25%.', priority: true });
+    if (postWork || isWorking) {
+      tips.push({ icon: '\uD83C\uDFE0', text: 'Dopo il lavoro il recupero e prioritario. Sediti, rilassa i muscoli, fai stretching leggero. Il corpo ha bisogno di transizione.', priority: true });
+    }
+    if (b.dDrain > 10) tips.push({ icon: '\uD83D\uDCF5', text: 'Smetti di usare il telefono ora. Con energia bassa, lo schermo accelera il deterioramento cognitivo e peggiora l\'umore.', priority: true });
+    if (stressVal >= 2) tips.push({ icon: '\uD83E\uDDD8', text: 'Stress + energia bassa e una combinazione pericolosa. Fermati e fai 3 min di respirazione profonda. Non e opzionale.', priority: true });
+    if (actVal === 0) tips.push({ icon: '\uD83D\uDEB6', text: 'Muoviti: anche 5 min di camminata lenta attivano il sistema nervoso parasimpatico e riducono la sensazione di esaurimento.', priority: false });
+    if (hoursLeft && hoursLeft < 3) tips.push({ icon: '\uD83D\uDE34', text: 'Prepara il corpo al sonno: luce soffusa, temperatura fresca, niente caffeina. Il recupero vero avviene solo dormendo.', priority: true });
+    if (hoursLeft && hoursLeft > 5) tips.push({ icon: '\u26A1', text: 'Hai ancora molte ore ma poca energia. Priorita immediata: pausa totale da schermi + acqua + 15 min di riposo ad occhi chiusi.', priority: true });
+    if (sleep < 6) tips.push({ icon: '\uD83D\uDECF\uFE0F', text: `Hai dormito solo ${sleep}h. Il deficit di sonno e la causa principale. Stasera vai a letto almeno 1h prima del solito.`, priority: true });
+
+  // ========= ENERGY 0-19%: Emergency Recovery =========
+  } else {
+    tips.push({ icon: '\uD83D\uDED1', text: 'STOP. Energia quasi esaurita. Il tuo corpo sta funzionando in modalita sopravvivenza. Ogni minuto di schermo peggiora la situazione.', priority: true });
+    tips.push({ icon: '\uD83D\uDECF\uFE0F', text: 'Se puoi, sdraiati e chiudi gli occhi per 20 min. A questo livello anche il riposo passivo e fondamentale per il recupero.', priority: true });
+    tips.push({ icon: '\uD83D\uDCA7', text: 'Bevi acqua con un pizzico di sale o una bevanda con elettroliti. Il sistema nervoso ha bisogno di idratazione per funzionare.', priority: true });
+    if (hoursLeft && hoursLeft < 4) {
+      tips.push({ icon: '\uD83C\uDF19', text: 'Vai a dormire il prima possibile. Non forzare la veglia: dormire adesso e la cosa piu importante che puoi fare.', priority: true });
+    } else {
+      tips.push({ icon: '\u2600\uFE0F', text: 'Esci all\'aria aperta se possibile. 10 min di luce solare e camminata lenta sono l\'unico stimolante naturale sicuro a questo livello.', priority: true });
+    }
+    if (stressVal >= 2) tips.push({ icon: '\uD83E\uDDD8', text: 'Fai body scan: sdraiati, chiudi gli occhi, rilassa ogni muscolo dalla testa ai piedi. Lo stress con energia zero puo causare crisi di ansia.', priority: true });
+  }
+
+  // Profile hobbies as alternatives
+  const hobbies = prof.hobbies || [];
+  if (energy < 60 && hobbies.length > 0) {
+    const relaxHobbies = hobbies.filter(h => ['lettura', 'musica', 'meditazione', 'cucina', 'giardinaggio', 'arte'].includes(h));
+    if (relaxHobbies.length > 0) {
+      const hobby = relaxHobbies[Math.floor(curH * 7) % relaxHobbies.length]; // pseudo-random basato sull'ora
+      const hobbyNames = { lettura: 'leggere', musica: 'ascoltare musica', meditazione: 'meditare', cucina: 'cucinare', giardinaggio: 'fare giardinaggio', arte: 'disegnare/creare' };
+      tips.push({ icon: '\uD83C\uDFA8', text: `Sostituisci lo schermo con ${hobbyNames[hobby] || hobby}. Le attivita offline che ti piacciono accelerano il recupero mentale.`, priority: false });
+    }
+  }
+
+  // Limit tips based on energy level (more tips when energy is lower)
+  const maxTips = energy < 20 ? 5 : energy < 40 ? 4 : 3;
+  // Priority tips first
+  const sorted = tips.sort((a, b) => (b.priority ? 1 : 0) - (a.priority ? 1 : 0));
+  return sorted.slice(0, maxTips);
+}
+
+function buildEnergyWarningsHTML(report) {
+  if (!report) return '';
+  const energy = calculateEnergy(report);
+  const warnings = getEnergyWarnings(energy, report);
+  if (warnings.length === 0) return '';
+  return warnings.map(w => `
+    <div class="energy-warning ${w.level}">
+      <span class="energy-warning-icon">${w.icon}</span>
+      <span>${w.text}</span>
+    </div>
+  `).join('');
+}
+
+function buildEnergyTipsHTML(report) {
+  if (!report) return '';
+  const energy = calculateEnergy(report);
+  const tips = getEnergyRecoveryTips(energy, report);
+  if (tips.length === 0) return '';
+  const titleText = energy >= 80 ? 'Consigli' : energy >= 60 ? 'Suggerimenti recupero' : energy >= 40 ? 'Recupero attivo' : energy >= 20 ? 'Recupero urgente' : 'Recupero d\'emergenza';
+  return `
+    <div class="energy-tips">
+      <div class="energy-tips-title">${titleText}</div>
+      ${tips.map(t => `
+        <div class="energy-tip${t.priority ? ' priority' : ''}">
+          <span class="energy-tip-icon">${t.icon}</span>
+          <span class="energy-tip-text">${t.text}</span>
+        </div>
+      `).join('')}
+    </div>
+  `;
 }
 
 // ============ PROFILE ============
@@ -2993,6 +3266,10 @@ function refreshDashboardEnergy() {
 
     // Update factors
     document.getElementById('energy-factors').innerHTML = buildEnergyFactorsHTML(report);
+
+    // Update warnings and recovery tips (change with time/energy level)
+    document.getElementById('energy-warnings').innerHTML = buildEnergyWarningsHTML(report);
+    document.getElementById('energy-tips').innerHTML = buildEnergyTipsHTML(report);
 
     // Update stored energy for consistency
     report.energy = energy;
