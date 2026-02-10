@@ -567,6 +567,33 @@ input[type="range"]::-webkit-slider-thumb {
         <div class="energy-factors" id="energy-factors"></div>
       </div>
 
+      <!-- Today's Work -->
+      <div class="card fade-up" id="today-work-card">
+        <div class="card-title" style="margin-bottom:4px">Turno di oggi</div>
+        <p style="font-size:11px; color:var(--text3); margin-bottom:14px">Registra il turno di oggi per un calcolo energia preciso</p>
+        <div style="display:flex; gap:10px; margin-bottom:10px">
+          <div style="flex:1">
+            <div style="font-size:11px; color:var(--text2); font-weight:600; margin-bottom:6px">Inizio</div>
+            <div style="display:flex; align-items:center; gap:8px">
+              <input type="range" id="today-work-start" min="4" max="16" step="0.25" value="9" style="flex:1" oninput="updateTodayWorkDisplay()">
+              <span style="font-size:15px; font-weight:700; color:var(--accent); min-width:44px; text-align:right" id="today-work-start-val">9:00</span>
+            </div>
+          </div>
+          <div style="flex:1">
+            <div style="font-size:11px; color:var(--text2); font-weight:600; margin-bottom:6px">Fine</div>
+            <div style="display:flex; align-items:center; gap:8px">
+              <input type="range" id="today-work-end" min="6" max="24" step="0.25" value="18" style="flex:1" oninput="updateTodayWorkDisplay()">
+              <span style="font-size:15px; font-weight:700; color:var(--accent); min-width:44px; text-align:right" id="today-work-end-val">18:00</span>
+            </div>
+          </div>
+        </div>
+        <div id="today-work-summary" style="font-size:12px; color:var(--text2); padding:10px; background:var(--bg3); border-radius:10px; display:none"></div>
+        <div style="display:flex; gap:8px; margin-top:10px">
+          <button class="btn btn-primary" onclick="saveTodayWork()" style="flex:1; padding:10px; font-size:13px">Salva turno</button>
+          <button class="btn btn-secondary" onclick="clearTodayWork()" style="padding:10px; font-size:13px">Giorno libero</button>
+        </div>
+      </div>
+
       <!-- Stats -->
       <div class="stats-row fade-up">
         <div class="stat-card">
@@ -881,9 +908,14 @@ input[type="range"]::-webkit-slider-thumb {
           <div class="profile-chip selected" data-val="misto" onclick="profileChipSelect('profile-worktype',this); updateWorkFeedback()">Fisico + Mentale</div>
           <div class="profile-chip" data-val="leggero" onclick="profileChipSelect('profile-worktype',this); updateWorkFeedback()">Leggero/Sedentario</div>
         </div>
+        <div class="profile-field" style="margin-top:12px"><span class="profile-field-label">A che ora inizi a lavorare?</span></div>
+        <div class="profile-slider-row">
+          <input type="range" id="profile-workstart" min="4" max="16" step="0.25" value="9" oninput="updateWorkTimeDisplay()">
+          <span class="profile-slider-val" id="profile-workstart-val">9:00</span>
+        </div>
         <div class="profile-field" style="margin-top:12px"><span class="profile-field-label">A che ora finisci di lavorare?</span></div>
         <div class="profile-slider-row">
-          <input type="range" id="profile-workend" min="6" max="24" step="0.25" value="18" oninput="updateWorkEndDisplay()">
+          <input type="range" id="profile-workend" min="6" max="24" step="0.25" value="18" oninput="updateWorkTimeDisplay()">
           <span class="profile-slider-val" id="profile-workend-val">18:00</span>
         </div>
         <div id="profile-work-feedback"></div>
@@ -1236,13 +1268,14 @@ let state = {
   history: [],
   goal: 120,
   context: null,
-  profile: null
+  profile: null,
+  todayWork: null  // { start, end, date }
 };
 
 // ============ STORAGE ============
 const Storage = {
   save() {
-    const data = { history: state.history, goal: state.goal, profile: state.profile };
+    const data = { history: state.history, goal: state.goal, profile: state.profile, todayWork: state.todayWork };
     localStorage.setItem('terminus_data', JSON.stringify(data));
   },
   load() {
@@ -1252,6 +1285,12 @@ const Storage = {
         state.history = data.history || [];
         state.goal = data.goal || 120;
         state.profile = data.profile || null;
+        // Load todayWork, auto-reset if from a different day
+        if (data.todayWork && data.todayWork.date === new Date().toISOString().slice(0, 10)) {
+          state.todayWork = data.todayWork;
+        } else {
+          state.todayWork = null;
+        }
       }
     } catch(e) {}
   },
@@ -2051,20 +2090,25 @@ function calculateEnergy(report) {
       else if (bedH >= 24) bedtimePenalty = 6; // wrapped past midnight
     }
 
-    // 11. FATICA LAVORATIVA → drain basato su tipo lavoro e ore dalla fine turno
-    // Il lavoro fisico+mentale drena piu energia, l'effetto diminuisce col recupero
+    // 11. FATICA LAVORATIVA → drain basato su tipo lavoro, ore lavorate e ore dalla fine turno
+    // Usa il turno di oggi se registrato, altrimenti il profilo
     let workFatigue = 0;
-    if (prof.workType && prof.workEndTime != null) {
-      const hoursSinceWork = curExact - prof.workEndTime;
-      if (hoursSinceWork >= -0.5 && hoursSinceWork < 6) {
-        // Intensita base per tipo lavoro
-        const workIntensity = { 'fisico': 14, 'misto': 16, 'mentale': 10, 'leggero': 4 };
-        const baseWork = workIntensity[prof.workType] || 8;
-        // Ore lavorate (da sveglia a fine turno - 1h preparazione)
-        const workHours = (prof.workEndTime || 18) - (prof.wakeTime || 7) - 1;
-        const longShiftBonus = workHours > 9 ? Math.min(6, (workHours - 9) * 2) : 0;
-        // Recupero: la fatica diminuisce esponenzialmente dopo la fine del turno
-        const recoveryFactor = hoursSinceWork <= 0 ? 1.0 : Math.exp(-hoursSinceWork * 0.4);
+    const ew = getEffectiveWork();
+    if (ew) {
+      const hoursSinceWork = curExact - ew.end;
+      // Durante il lavoro: fatica graduale. Dopo: recupero esponenziale.
+      const workIntensity = { 'fisico': 14, 'misto': 16, 'mentale': 10, 'leggero': 4 };
+      const baseWork = workIntensity[ew.type] || 8;
+      const longShiftBonus = ew.hours > 9 ? Math.min(6, (ew.hours - 9) * 2) : 0;
+
+      if (curExact >= ew.start && curExact <= ew.end) {
+        // DURANTE il turno: fatica che cresce progressivamente
+        const hoursWorked = curExact - ew.start;
+        const progress = hoursWorked / Math.max(1, ew.hours); // 0→1
+        workFatigue = (baseWork + longShiftBonus) * progress * 0.8;
+      } else if (hoursSinceWork >= 0 && hoursSinceWork < 8) {
+        // DOPO il turno: picco fatica poi recupero esponenziale
+        const recoveryFactor = Math.exp(-hoursSinceWork * 0.35);
         workFatigue = (baseWork + longShiftBonus) * recoveryFactor;
       }
     }
@@ -2141,19 +2185,25 @@ function getEnergyBreakdown(report) {
   // Work fatigue breakdown
   let wDrain = 0;
   let workLabel = null;
-  if (prof.workType && prof.workEndTime != null) {
+  const ew = getEffectiveWork();
+  if (ew) {
     const now = new Date();
     const curExact = now.getHours() + now.getMinutes() / 60;
-    const hoursSinceWork = curExact - prof.workEndTime;
-    if (hoursSinceWork >= -0.5 && hoursSinceWork < 6) {
-      const workIntensity = { 'fisico': 14, 'misto': 16, 'mentale': 10, 'leggero': 4 };
-      const baseWork = workIntensity[prof.workType] || 8;
-      const workHours = (prof.workEndTime || 18) - (prof.wakeTime || 7) - 1;
-      const longShiftBonus = workHours > 9 ? Math.min(6, (workHours - 9) * 2) : 0;
-      const recoveryFactor = hoursSinceWork <= 0 ? 1.0 : Math.exp(-hoursSinceWork * 0.4);
+    const hoursSinceWork = curExact - ew.end;
+    const workIntensity = { 'fisico': 14, 'misto': 16, 'mentale': 10, 'leggero': 4 };
+    const baseWork = workIntensity[ew.type] || 8;
+    const longShiftBonus = ew.hours > 9 ? Math.min(6, (ew.hours - 9) * 2) : 0;
+    const wtLabels = { 'fisico': 'Fisico', 'misto': 'Fis+Ment', 'mentale': 'Mentale', 'leggero': 'Leggero' };
+
+    if (curExact >= ew.start && curExact <= ew.end) {
+      const hoursWorked = curExact - ew.start;
+      const progress = hoursWorked / Math.max(1, ew.hours);
+      wDrain = Math.round((baseWork + longShiftBonus) * progress * 0.8);
+      workLabel = (wtLabels[ew.type] || 'Lavoro') + ' (in corso)';
+    } else if (hoursSinceWork >= 0 && hoursSinceWork < 8) {
+      const recoveryFactor = Math.exp(-hoursSinceWork * 0.35);
       wDrain = Math.round((baseWork + longShiftBonus) * recoveryFactor);
-      const wtLabels = { 'fisico': 'Fisico', 'misto': 'Fis+Ment', 'mentale': 'Mentale', 'leggero': 'Leggero' };
-      workLabel = wtLabels[prof.workType] || 'Lavoro';
+      workLabel = (wtLabels[ew.type] || 'Lavoro') + ' ' + Math.round(ew.hours) + 'h';
     }
   }
 
@@ -2326,23 +2376,29 @@ function updateProfilePreview() {
   }
 }
 
-function updateWorkEndDisplay() {
-  const val = parseFloat(document.getElementById('profile-workend').value);
+function formatTimeVal(val) {
   const hh = Math.floor(val);
   const mm = Math.round((val - hh) * 60);
-  document.getElementById('profile-workend-val').textContent = String(hh).padStart(2,'0') + ':' + String(mm).padStart(2,'0');
+  return String(hh).padStart(2,'0') + ':' + String(mm).padStart(2,'0');
+}
+
+function updateWorkTimeDisplay() {
+  const startVal = parseFloat(document.getElementById('profile-workstart').value);
+  const endVal = parseFloat(document.getElementById('profile-workend').value);
+  document.getElementById('profile-workstart-val').textContent = formatTimeVal(startVal);
+  document.getElementById('profile-workend-val').textContent = formatTimeVal(endVal);
   updateWorkFeedback();
 }
 
 function updateWorkFeedback() {
   const workType = getSelectedChip('profile-worktype');
+  const workStart = parseFloat(document.getElementById('profile-workstart').value);
   const workEnd = parseFloat(document.getElementById('profile-workend').value);
   const feedbackEl = document.getElementById('profile-work-feedback');
 
   if (!workType || workType === 'leggero') { feedbackEl.innerHTML = ''; return; }
 
-  const wakeTime = parseInt(document.getElementById('profile-wake').value) || 7;
-  const workHours = workEnd - wakeTime - 1; // circa 1h per prepararsi/tragitto
+  const workHours = workEnd - workStart;
 
   let fb = '';
   if (workType === 'fisico' || workType === 'misto') {
@@ -2432,6 +2488,7 @@ function saveProfile() {
     occupation: document.getElementById('profile-occupation').value,
     schedule: document.getElementById('profile-schedule').value,
     workType: getSelectedChip('profile-worktype'),
+    workStartTime: parseFloat(document.getElementById('profile-workstart').value),
     workEndTime: parseFloat(document.getElementById('profile-workend').value),
     wakeTime: parseInt(document.getElementById('profile-wake').value),
     bedTime: parseInt(document.getElementById('profile-bed').value),
@@ -2487,11 +2544,11 @@ function showProfileFeedbackSummary(profile) {
   }
 
   // Work fatigue
-  if (profile.workType && profile.workEndTime) {
-    const workHours = (profile.workEndTime || 18) - (profile.wakeTime || 7) - 1;
+  if (profile.workType && profile.workStartTime != null && profile.workEndTime != null) {
+    const workHours = profile.workEndTime - profile.workStartTime;
     const wtLabels = { 'fisico': 'fisico', 'misto': 'fisico e mentale', 'mentale': 'mentale', 'leggero': 'leggero' };
     if ((profile.workType === 'fisico' || profile.workType === 'misto') && profile.workEndTime >= 20) {
-      items.push({positive: false, text: `Lavoro ${wtLabels[profile.workType]} fino alle ${Math.floor(profile.workEndTime)}:00 (~${Math.round(workHours)}h). Il corpo post-turno ha cortisolo elevato e glicogeno esaurito: l'energia serale sara molto bassa e lo schermo amplifica la stanchezza.`});
+      items.push({positive: false, text: `Lavoro ${wtLabels[profile.workType]} ${formatTimeVal(profile.workStartTime)}-${formatTimeVal(profile.workEndTime)} (~${Math.round(workHours)}h). Il corpo post-turno ha cortisolo elevato e glicogeno esaurito: l'energia serale sara molto bassa e lo schermo amplifica la stanchezza.`});
     } else if (workHours >= 10) {
       items.push({positive: false, text: `Giornata lavorativa di ~${Math.round(workHours)}h (${wtLabels[profile.workType]}). Turni lunghi riducono la willpower del 40%: il telefono diventa piu addictive dopo il lavoro.`});
     } else if (profile.workType === 'misto' || profile.workType === 'fisico') {
@@ -2538,6 +2595,7 @@ function loadProfile() {
   // Sliders
   if (p.wakeTime != null) document.getElementById('profile-wake').value = p.wakeTime;
   if (p.bedTime != null) document.getElementById('profile-bed').value = p.bedTime;
+  if (p.workStartTime != null) document.getElementById('profile-workstart').value = p.workStartTime;
   if (p.workEndTime != null) document.getElementById('profile-workend').value = p.workEndTime;
 
   // Single-select chips
@@ -2570,12 +2628,129 @@ function loadProfile() {
   }
 
   // Update displays
-  updateWorkEndDisplay();
-  updateWorkFeedback();
+  updateWorkTimeDisplay();
   updateSleepProfile();
   updateProfilePreview();
   updateProfileFeedback();
   showProfileFeedbackSummary(p);
+}
+
+// ============ TODAY'S WORK ============
+function updateTodayWorkDisplay() {
+  const startVal = parseFloat(document.getElementById('today-work-start').value);
+  const endVal = parseFloat(document.getElementById('today-work-end').value);
+  document.getElementById('today-work-start-val').textContent = formatTimeVal(startVal);
+  document.getElementById('today-work-end-val').textContent = formatTimeVal(endVal);
+}
+
+function saveTodayWork() {
+  const start = parseFloat(document.getElementById('today-work-start').value);
+  const end = parseFloat(document.getElementById('today-work-end').value);
+  const workHours = end - start;
+
+  state.todayWork = {
+    start: start,
+    end: end,
+    hours: Math.max(0, workHours),
+    date: new Date().toISOString().slice(0, 10)
+  };
+  Storage.save();
+
+  // Show summary
+  const summaryEl = document.getElementById('today-work-summary');
+  const now = new Date();
+  const curH = now.getHours() + now.getMinutes() / 60;
+  let statusText = '';
+
+  if (curH < start) {
+    statusText = `Turno previsto: ${formatTimeVal(start)} - ${formatTimeVal(end)} (${workHours.toFixed(1)}h). Non hai ancora iniziato.`;
+  } else if (curH >= start && curH < end) {
+    const hoursWorked = curH - start;
+    const hoursLeft = end - curH;
+    statusText = `In turno da ${hoursWorked.toFixed(1)}h. Mancano ${hoursLeft.toFixed(1)}h alla fine (${formatTimeVal(end)}).`;
+  } else {
+    const hoursSince = curH - end;
+    statusText = `Turno finito da ${hoursSince.toFixed(1)}h. Hai lavorato ${workHours.toFixed(1)}h (${formatTimeVal(start)}-${formatTimeVal(end)}).`;
+  }
+  summaryEl.textContent = statusText;
+  summaryEl.style.display = 'block';
+
+  // Refresh energy
+  refreshDashboardEnergy();
+
+  // Visual confirmation
+  const btn = document.querySelector('#today-work-card .btn-primary');
+  const orig = btn.textContent;
+  btn.textContent = 'Salvato!';
+  btn.style.background = 'var(--green)';
+  setTimeout(() => { btn.textContent = orig; btn.style.background = ''; }, 2000);
+}
+
+function clearTodayWork() {
+  state.todayWork = null;
+  Storage.save();
+  document.getElementById('today-work-summary').style.display = 'none';
+  refreshDashboardEnergy();
+}
+
+function loadTodayWork() {
+  const tw = state.todayWork;
+  if (!tw) {
+    // Pre-fill from profile defaults
+    const prof = state.profile;
+    if (prof) {
+      if (prof.workStartTime != null) document.getElementById('today-work-start').value = prof.workStartTime;
+      if (prof.workEndTime != null) document.getElementById('today-work-end').value = prof.workEndTime;
+    }
+    updateTodayWorkDisplay();
+    return;
+  }
+  document.getElementById('today-work-start').value = tw.start;
+  document.getElementById('today-work-end').value = tw.end;
+  updateTodayWorkDisplay();
+
+  // Restore summary
+  const now = new Date();
+  const curH = now.getHours() + now.getMinutes() / 60;
+  const summaryEl = document.getElementById('today-work-summary');
+  let statusText = '';
+  if (curH < tw.start) {
+    statusText = `Turno previsto: ${formatTimeVal(tw.start)} - ${formatTimeVal(tw.end)} (${tw.hours.toFixed(1)}h). Non hai ancora iniziato.`;
+  } else if (curH >= tw.start && curH < tw.end) {
+    const hoursWorked = curH - tw.start;
+    const hoursLeft = tw.end - curH;
+    statusText = `In turno da ${hoursWorked.toFixed(1)}h. Mancano ${hoursLeft.toFixed(1)}h alla fine (${formatTimeVal(tw.end)}).`;
+  } else {
+    const hoursSince = curH - tw.end;
+    statusText = `Turno finito da ${hoursSince.toFixed(1)}h. Hai lavorato ${tw.hours.toFixed(1)}h (${formatTimeVal(tw.start)}-${formatTimeVal(tw.end)}).`;
+  }
+  summaryEl.textContent = statusText;
+  summaryEl.style.display = 'block';
+}
+
+// Helper to get effective work data (today's actual > profile default)
+function getEffectiveWork() {
+  const tw = state.todayWork;
+  const prof = state.profile || {};
+  if (tw) {
+    return {
+      start: tw.start,
+      end: tw.end,
+      hours: tw.hours,
+      type: prof.workType || 'misto',
+      isToday: true
+    };
+  }
+  if (prof.workStartTime != null && prof.workEndTime != null) {
+    return {
+      start: prof.workStartTime,
+      end: prof.workEndTime,
+      hours: prof.workEndTime - prof.workStartTime,
+      type: prof.workType || 'misto',
+      isToday: false
+    };
+  }
+  return null;
 }
 
 function getProfileContext() {
@@ -2586,19 +2761,25 @@ function getProfileContext() {
   const sleepH = p.wakeTime <= bed ? (24 - bed + p.wakeTime) : (p.wakeTime - bed);
 
   const workTypeLabels = { 'mentale': 'mentale', 'fisico': 'fisico', 'misto': 'fisico e mentale', 'leggero': 'leggero/sedentario' };
-  const workEndHH = Math.floor(p.workEndTime || 18);
-  const workEndMM = Math.round(((p.workEndTime || 18) - workEndHH) * 60);
-  const workEndStr = String(workEndHH).padStart(2,'0') + ':' + String(workEndMM).padStart(2,'0');
+  const ew = getEffectiveWork();
   const now = new Date();
   const curH = now.getHours() + now.getMinutes() / 60;
-  const hoursSinceWork = curH - (p.workEndTime || 18);
 
   let ctx = `\nPROFILO UTENTE:`;
   if (p.name) ctx += ` Nome: ${p.name}.`;
   ctx += ` Eta: ${p.age}.`;
-  ctx += ` Occupazione: ${p.occupation} (${p.schedule}), lavoro ${workTypeLabels[p.workType] || 'misto'}, finisce alle ${workEndStr}.`;
-  if (hoursSinceWork >= 0 && hoursSinceWork < 8) {
-    ctx += ` Ha finito di lavorare ${hoursSinceWork < 1 ? 'da poco' : 'da circa ' + Math.round(hoursSinceWork) + 'h'}. Dopo un lavoro ${workTypeLabels[p.workType] || 'misto'} l'energia residua e ridotta.`;
+  if (ew) {
+    ctx += ` Occupazione: ${p.occupation} (${p.schedule}), lavoro ${workTypeLabels[ew.type] || 'misto'}, turno ${formatTimeVal(ew.start)}-${formatTimeVal(ew.end)} (${ew.hours.toFixed(1)}h).`;
+    const hoursSinceWork = curH - ew.end;
+    if (curH >= ew.start && curH < ew.end) {
+      const hoursWorked = curH - ew.start;
+      ctx += ` E' attualmente al lavoro da ${hoursWorked.toFixed(1)}h. L'energia cala progressivamente durante il turno.`;
+    } else if (hoursSinceWork >= 0 && hoursSinceWork < 8) {
+      ctx += ` Ha finito di lavorare ${hoursSinceWork < 1 ? 'da poco' : 'da circa ' + Math.round(hoursSinceWork) + 'h'}. Dopo ${ew.hours.toFixed(1)}h di lavoro ${workTypeLabels[ew.type] || 'misto'} l'energia residua e ridotta.`;
+    }
+    if (ew.isToday) ctx += ` (turno registrato oggi)`;
+  } else {
+    ctx += ` Occupazione: ${p.occupation} (${p.schedule}).`;
   }
   ctx += ` Sonno tipico: ${sleepH}h (sveglia ${p.wakeTime}:00, letto ${String(bed).padStart(2,'0')}:00), cronotipo ${p.chronotype}.`;
   ctx += ` Vive: ${p.social}. Attivita fisica: ${p.activity}. Stress: ${p.stress}. Personalita: ${p.personality}.`;
@@ -2821,6 +3002,7 @@ function init() {
   Storage.load();
   const savedKey = Storage.loadKey();
   loadProfile();
+  loadTodayWork();
 
   document.getElementById('goal-slider').value = state.goal;
   document.getElementById('goal-display').textContent = formatMin(state.goal);
