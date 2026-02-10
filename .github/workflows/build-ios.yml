@@ -53,6 +53,14 @@ jobs:
           echo "========== LAST 100 LINES =========="
           tail -100 /tmp/xcodebuild.log 2>/dev/null || true
 
+      - name: Upload build log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log
+          path: /tmp/xcodebuild.log
+          retention-days: 7
+
       - name: Verify and Package IPA
         run: |
           echo "=== Searching for .app ==="

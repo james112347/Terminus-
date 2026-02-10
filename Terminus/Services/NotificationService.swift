@@ -54,7 +54,7 @@ final class NotificationService {
         content.body = "Tempo schermo totale: \(totalMinutes) minuti (obiettivo: \(goalMinutes)min). " +
             "L'esposizione prolungata può causare affaticamento mentale, " +
             "disturbi del sonno e riduzione della produttività."
-        content.sound = .defaultCritical
+        content.sound = UNNotificationSound.defaultCriticalSound(withAudioVolume: 1.0)
         content.categoryIdentifier = "CRITICAL_ALERT"
 
         let request = UNNotificationRequest(

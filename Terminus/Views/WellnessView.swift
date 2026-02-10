@@ -249,7 +249,7 @@ struct WellnessView: View {
                 MoodEffect(
                     time: "> 4 ore",
                     effect: "Rischio significativo per umore e benessere mentale",
-                    level: .critical
+                    level: .high
                 )
             }
         }
