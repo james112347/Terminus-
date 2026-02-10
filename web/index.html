@@ -849,6 +849,16 @@ input[type="range"]::-webkit-slider-thumb {
       </div>
     </div>
 
+    <div class="ctx-group">
+      <div class="ctx-label">Quanta acqua hai bevuto oggi?</div>
+      <div class="ctx-options" id="ctx-hydration">
+        <div class="ctx-opt" data-val="0" onclick="ctxSelect('ctx-hydration',this)">Quasi niente</div>
+        <div class="ctx-opt selected" data-val="1" onclick="ctxSelect('ctx-hydration',this)">2-4 bicchieri</div>
+        <div class="ctx-opt" data-val="2" onclick="ctxSelect('ctx-hydration',this)">5-7 bicchieri</div>
+        <div class="ctx-opt" data-val="3" onclick="ctxSelect('ctx-hydration',this)">8+ bicchieri</div>
+      </div>
+    </div>
+
     <div class="ctx-group" style="margin-bottom:24px">
       <div class="ctx-time-auto">
         <div class="ctx-time-dot"></div>
@@ -1003,15 +1013,17 @@ Estrai TUTTI i dati visibili e rispondi SOLO con JSON valido (senza markdown):
     const sleepH = Number(ctx.sleepHours) || 7;
     const actLabels = ['nessuna','leggera','moderata','intensa'];
     const stressLabels = ['basso','medio','alto'];
+    const hydLabels = ['quasi niente','2-4 bicchieri','5-7 bicchieri','8+ bicchieri'];
     const ctxActivity = actLabels[Number(ctx.activity) || 0];
     const ctxStress = stressLabels[Number(ctx.stress) || 1];
+    const ctxHydration = hydLabels[Number(ctx.hydration) || 1];
     const ctxTime = ctx.currentTime || '--:--';
 
     const systemPrompt = `Sei un consulente di benessere digitale. Analizza i dati e rispondi in italiano con JSON puro.
 
 CONTESTO: L'utente ha usato il telefono ${totalMin} minuti su un obiettivo di ${goalMin}. Livello: ${severity}.
-STATO UTENTE: Ha dormito ${sleepH}h, attivita fisica: ${ctxActivity}, stress: ${ctxStress}. Ora: ${ctxTime}.
-NOTA: Personalizza i consigli sullo stato reale. Se ha dormito poco (<6h), priorita al recupero. Se stress alto, suggerisci tecniche di decompressione senza schermo. Se nessuna attivita fisica, includi movimento come alternativa al telefono.
+STATO UTENTE: Ha dormito ${sleepH}h, attivita fisica: ${ctxActivity}, stress: ${ctxStress}, idratazione: ${ctxHydration}. Ora: ${ctxTime}.
+NOTA: Personalizza i consigli sullo stato reale. Se ha dormito poco (<6h), priorita al recupero. Se stress alto, suggerisci tecniche di decompressione senza schermo. Se nessuna attivita fisica, includi movimento come alternativa al telefono. Se idratazione scarsa (quasi niente/2-4 bicchieri), ricorda che la disidratazione riduce concentrazione ed energia mentale fino al 25%: suggerisci di bere piu acqua.
 
 ISTRUZIONI PER OGNI CAMPO (ogni campo ha uno scopo diverso - NON ripetere le stesse informazioni tra campi):
 
@@ -1136,9 +1148,10 @@ function getContextData() {
   const sleepHours = parseFloat(document.getElementById('ctx-sleep').value) || 7;
   const activity = parseInt(document.querySelector('#ctx-activity .ctx-opt.selected')?.dataset.val) || 0;
   const stress = parseInt(document.querySelector('#ctx-stress .ctx-opt.selected')?.dataset.val) || 1;
+  const hydration = parseInt(document.querySelector('#ctx-hydration .ctx-opt.selected')?.dataset.val) || 1;
   const currentHour = new Date().getHours();
   const currentTime = String(currentHour).padStart(2,'0') + ':' + String(new Date().getMinutes()).padStart(2,'0');
-  return { sleepHours, activity, stress, currentHour, currentTime };
+  return { sleepHours, activity, stress, hydration, currentHour, currentTime };
 }
 
 function showContextPopup(type) {
@@ -1534,14 +1547,19 @@ function calculateEnergy(report) {
     // 2. ATTIVITA FISICA → bonus energia
     const activityBonus = [0, 6, 10, 5][Number(ctx.activity) || 0];
 
-    // 3. STRESS → amplifica il drain (ridotto)
+    // 3. IDRATAZIONE → bonus/penalita cognitiva
+    // Disidratazione riduce concentrazione e energia fino al 25% (studi neuroscienza)
+    // 0=quasi niente(-8), 1=2-4 bicchieri(0), 2=5-7 bicchieri(+5), 3=8+(+8)
+    const hydrationBonus = [-8, 0, 5, 8][Number(ctx.hydration) || 1];
+
+    // 4. STRESS → amplifica il drain (ridotto)
     const stressMultiplier = [0.85, 1.0, 1.15][Number(ctx.stress) || 1];
 
-    // 4. DURATA SCHERMO → sigmoide (satura a ~35, punto medio a 5h)
+    // 5. DURATA SCHERMO → sigmoide (satura a ~35, punto medio a 5h)
     const hours = totalMin / 60;
     const durationDrain = 35 / (1 + Math.exp(-(hours - 5) * 0.5));
 
-    // 5. QUALITA CONTENUTI → drain con cap a 15
+    // 6. QUALITA CONTENUTI → drain con cap a 15
     const drainWeights = {
       socialMedia: 0.04, entertainment: 0.03, gaming: 0.03,
       news: 0.025, other: 0.02, communication: 0.01,
@@ -1553,12 +1571,12 @@ function calculateEnergy(report) {
     });
     contentDrain = Math.min(15, contentDrain);
 
-    // 6. FRAMMENTAZIONE → sblocchi + notifiche (cap a 8)
+    // 7. FRAMMENTAZIONE → sblocchi + notifiche (cap a 8)
     const pickups = Number(report.pickups) || 0;
     const notifications = Number(report.notifications) || 0;
     const fragmentDrain = Math.min(8, pickups * 0.06 + notifications * 0.02);
 
-    // 7. OBIETTIVO → penalty morbida / bonus
+    // 8. OBIETTIVO → penalty morbida / bonus
     let goalDrain = 0;
     if (totalMin > goalMin) {
       const overMin = totalMin - goalMin;
@@ -1567,7 +1585,7 @@ function calculateEnergy(report) {
       goalDrain = -Math.min(5, (goalMin - totalMin) / goalMin * 8);
     }
 
-    // 8. RITMO CIRCADIANO → leggera modifica
+    // 9. RITMO CIRCADIANO → leggera modifica
     const curHour = Number(ctx.currentHour) || new Date().getHours();
     let circadianMult = 1.0;
     if (curHour >= 22 || curHour < 6) circadianMult = 1.15;
@@ -1575,7 +1593,7 @@ function calculateEnergy(report) {
     else if (curHour >= 20) circadianMult = 1.08;
 
     // Calcolo finale
-    const startEnergy = Math.min(100, baseline + activityBonus);
+    const startEnergy = Math.min(100, baseline + activityBonus + hydrationBonus);
     const totalDrain = (durationDrain + contentDrain + fragmentDrain + goalDrain) * stressMultiplier * circadianMult;
     const energy = startEnergy - totalDrain;
 
@@ -1597,7 +1615,9 @@ function getEnergyBreakdown(report) {
   else if (sleep <= 7) baseline = 85; else if (sleep <= 8) baseline = 95;
   else if (sleep <= 9) baseline = 98; else baseline = 95;
   const actBonus = [0, 6, 10, 5][Number(ctx.activity) || 0];
-  const startE = Math.min(100, baseline + actBonus);
+  const hydBonus = [-8, 0, 5, 8][Number(ctx.hydration) || 1];
+  const hydLabel = ['Quasi niente','2-4 bicchieri','5-7 bicchieri','8+ bicchieri'][Number(ctx.hydration) || 1];
+  const startE = Math.min(100, baseline + actBonus + hydBonus);
   const hours = totalMin / 60;
   const dDrain = Math.round(35 / (1 + Math.exp(-(hours - 5) * 0.5)));
   const drainW = { socialMedia:0.04, entertainment:0.03, gaming:0.03, news:0.025, other:0.02, communication:0.01, productivity:0.005, education:0.003, health:0.003, utilities:0.005 };
@@ -1612,7 +1632,7 @@ function getEnergyBreakdown(report) {
   }
   const stressL = ['Basso','Medio','Alto'][Number(ctx.stress)||1];
   const stressM = [0.85,1.0,1.15][Number(ctx.stress)||1];
-  return { startE, baseline, actBonus, dDrain, cDrain, fDrain, gDrain, stressL, stressM, sleep, totalMin, goalMin };
+  return { startE, baseline, actBonus, hydBonus, hydLabel, dDrain, cDrain, fDrain, gDrain, stressL, stressM, sleep, totalMin, goalMin };
 }
 
 function buildEnergyFactorsHTML(report) {
@@ -1620,6 +1640,7 @@ function buildEnergyFactorsHTML(report) {
   return `
     <div class="energy-factor"><div class="energy-factor-dot" style="background:#4a90d9"></div>Sonno ${b.sleep}h: ${b.baseline}/100</div>
     <div class="energy-factor"><div class="energy-factor-dot" style="background:#26c281"></div>Attivita: +${b.actBonus}</div>
+    <div class="energy-factor"><div class="energy-factor-dot" style="background:#3dc1d3"></div>Idratazione: ${b.hydBonus >= 0 ? '+' : ''}${b.hydBonus}</div>
     <div class="energy-factor"><div class="energy-factor-dot" style="background:#e74c6f"></div>Schermo: -${b.dDrain}</div>
     <div class="energy-factor"><div class="energy-factor-dot" style="background:#a855f7"></div>Contenuti: -${b.cDrain}</div>
     <div class="energy-factor"><div class="energy-factor-dot" style="background:#f0883e"></div>Interruzioni: -${b.fDrain}</div>
