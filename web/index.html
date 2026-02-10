@@ -425,12 +425,20 @@ input[type="range"]::-webkit-slider-thumb {
           Condividi uno screenshot della schermata <strong>Impostazioni &gt; Tempo di utilizzo</strong> del tuo iPhone. L'AI estrarrà i dati e analizzerà il tuo benessere digitale.
         </p>
 
-        <div id="upload-zone" class="upload-area" onclick="document.getElementById('file-input').click()">
-          <div class="upload-icon">📸</div>
-          <div class="upload-text">Tocca per caricare screenshot</div>
-          <div class="upload-sub">oppure scatta una foto della schermata</div>
+        <div style="display:flex; gap:10px; margin-bottom:16px">
+          <div class="upload-area" onclick="document.getElementById('file-input').click()" style="flex:1; padding:24px 12px; margin:0">
+            <div class="upload-icon" style="font-size:36px">🖼️</div>
+            <div class="upload-text" style="font-size:14px">Galleria</div>
+            <div class="upload-sub">Scegli screenshot</div>
+          </div>
+          <div class="upload-area" onclick="document.getElementById('camera-input').click()" style="flex:1; padding:24px 12px; margin:0">
+            <div class="upload-icon" style="font-size:36px">📸</div>
+            <div class="upload-text" style="font-size:14px">Fotocamera</div>
+            <div class="upload-sub">Scatta foto</div>
+          </div>
         </div>
-        <input type="file" id="file-input" accept="image/*" capture="environment" style="display:none" onchange="handleFileSelect(event)">
+        <input type="file" id="file-input" accept="image/*" style="display:none" onchange="handleFileSelect(event)">
+        <input type="file" id="camera-input" accept="image/*" capture="environment" style="display:none" onchange="handleFileSelect(event)">
 
         <div id="preview-container" class="preview-wrap" style="display:none">
           <img id="preview-img" src="">
