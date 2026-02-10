@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Settings view for configuring goals, limits, and notifications
+/// Settings view for configuring goals, limits, notifications, and API key
 struct SettingsView: View {
     @EnvironmentObject var monitor: UsageMonitorViewModel
     @State private var dailyGoalHours: Double = 2.0
@@ -10,10 +10,29 @@ struct SettingsView: View {
     @State private var notificationsEnabled: Bool = true
     @State private var lateNightHour: Int = 23
     @State private var showResetConfirm: Bool = false
+    @State private var groqAPIKey: String = ""
+    @State private var showAPIKeySaved: Bool = false
 
     var body: some View {
         NavigationStack {
             Form {
+                // API Key Setup (shown prominently if not configured)
+                if !GroqAIService.shared.hasAPIKey {
+                    Section {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Label("Configura AI", systemImage: "exclamationmark.triangle.fill")
+                                .font(.headline)
+                                .foregroundStyle(.orange)
+                            Text("Inserisci la tua chiave API Groq per attivare l'analisi AI del benessere digitale.")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            apiKeyInput
+                        }
+                    } header: {
+                        Text("Configurazione Richiesta")
+                    }
+                }
+
                 // Daily Goal
                 Section {
                     VStack(alignment: .leading, spacing: 8) {
@@ -72,7 +91,7 @@ struct SettingsView: View {
                         Stepper(
                             "Avviso notturno: ore \(lateNightHour):00",
                             value: $lateNightHour,
-                            in: 20...2
+                            in: 20...23
                         )
                     }
                 }
@@ -98,6 +117,25 @@ struct SettingsView: View {
                     }
                 }
 
+                // API Key (always available in settings)
+                Section {
+                    apiKeyInput
+
+                    if GroqAIService.shared.hasAPIKey {
+                        HStack {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundStyle(.green)
+                            Text("API key configurata")
+                                .font(.subheadline)
+                                .foregroundStyle(.green)
+                        }
+                    }
+                } header: {
+                    Text("Groq AI")
+                } footer: {
+                    Text("Ottieni la tua chiave API su console.groq.com. La chiave resta salvata in modo sicuro sul dispositivo.")
+                }
+
                 // About
                 Section("Info") {
                     HStack {
@@ -111,6 +149,13 @@ struct SettingsView: View {
                         Text("AI Engine")
                         Spacer()
                         Text("Groq - Llama 3.3 70B")
+                            .foregroundStyle(.secondary)
+                    }
+
+                    HStack {
+                        Text("Target")
+                        Spacer()
+                        Text("iOS 18+ / iPhone 17")
                             .foregroundStyle(.secondary)
                     }
                 }
@@ -133,6 +178,37 @@ struct SettingsView: View {
             } message: {
                 Text("Questa azione cancellerà tutti i report e le impostazioni. Non può essere annullata.")
             }
+        }
+    }
+
+    private var apiKeyInput: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            SecureField("gsk_...", text: $groqAPIKey)
+                .textContentType(.password)
+                .autocorrectionDisabled()
+                .textInputAutocapitalization(.never)
+
+            Button {
+                guard !groqAPIKey.trimmingCharacters(in: .whitespaces).isEmpty else { return }
+                GroqAIService.shared.setAPIKey(groqAPIKey.trimmingCharacters(in: .whitespaces))
+                showAPIKeySaved = true
+                groqAPIKey = ""
+            } label: {
+                HStack {
+                    Image(systemName: "key.fill")
+                    Text("Salva Chiave API")
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 8)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(.indigo)
+            .disabled(groqAPIKey.trimmingCharacters(in: .whitespaces).isEmpty)
+        }
+        .alert("Chiave API Salvata", isPresented: $showAPIKeySaved) {
+            Button("OK") {}
+        } message: {
+            Text("La chiave API Groq e' stata salvata. Ora puoi usare l'analisi AI dalla Dashboard.")
         }
     }
 

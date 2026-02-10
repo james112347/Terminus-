@@ -49,5 +49,7 @@
     </array>
     <key>NSUserTrackingUsageDescription</key>
     <string>Terminus monitora il tempo di utilizzo delle app per fornirti consigli di benessere digitale personalizzati.</string>
+    <key>ITSAppUsesNonExemptEncryption</key>
+    <false/>
 </dict>
 </plist>

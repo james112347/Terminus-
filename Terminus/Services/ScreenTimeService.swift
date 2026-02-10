@@ -1,18 +1,22 @@
 import Foundation
+#if canImport(DeviceActivity)
 import DeviceActivity
+#endif
+#if canImport(FamilyControls)
 import FamilyControls
+#endif
+#if canImport(ManagedSettings)
 import ManagedSettings
+#endif
 
 /// Service to access and monitor Screen Time data using Apple's DeviceActivity framework
+/// Requires iOS 16+ and Family Controls entitlement enabled in Apple Developer Portal
 final class ScreenTimeService: ObservableObject {
 
     static let shared = ScreenTimeService()
 
     @Published var authorizationStatus: AuthorizationStatus = .notDetermined
     @Published var isMonitoring: Bool = false
-
-    private let center = AuthorizationCenter.shared
-    private let store = DeviceActivityCenter()
 
     enum AuthorizationStatus {
         case notDetermined
@@ -21,8 +25,11 @@ final class ScreenTimeService: ObservableObject {
     }
 
     /// Request Screen Time authorization from the user
+    /// Must be called on a physical device - Simulator does not support FamilyControls
     func requestAuthorization() async -> Bool {
+        #if canImport(FamilyControls)
         do {
+            let center = AuthorizationCenter.shared
             try await center.requestAuthorization(for: .individual)
             await MainActor.run {
                 self.authorizationStatus = .approved
@@ -35,16 +42,24 @@ final class ScreenTimeService: ObservableObject {
             print("Screen Time authorization failed: \(error.localizedDescription)")
             return false
         }
+        #else
+        await MainActor.run {
+            self.authorizationStatus = .denied
+        }
+        return false
+        #endif
     }
 
     /// Start monitoring device activity
     func startMonitoring() {
+        #if canImport(DeviceActivity)
         let schedule = DeviceActivitySchedule(
             intervalStart: DateComponents(hour: 0, minute: 0),
             intervalEnd: DateComponents(hour: 23, minute: 59),
             repeats: true
         )
 
+        let store = DeviceActivityCenter()
         do {
             try store.startMonitoring(
                 .daily,
@@ -55,25 +70,34 @@ final class ScreenTimeService: ObservableObject {
             print("Failed to start monitoring: \(error.localizedDescription)")
             isMonitoring = false
         }
+        #else
+        print("DeviceActivity not available on this platform")
+        isMonitoring = false
+        #endif
     }
 
     /// Stop monitoring device activity
     func stopMonitoring() {
+        #if canImport(DeviceActivity)
+        let store = DeviceActivityCenter()
         store.stopMonitoring([.daily])
+        #endif
         isMonitoring = false
     }
 }
 
+#if canImport(DeviceActivity)
 extension DeviceActivityName {
     static let daily = Self("terminus.daily.monitor")
 }
 
 /// DeviceActivity monitor extension handler
+/// NOTE: This must live in a separate App Extension target for production use.
+/// In Xcode: File > New > Target > DeviceActivityMonitor Extension
 class TerminusDeviceActivityMonitor: DeviceActivityMonitor {
 
     override func intervalDidStart(for activity: DeviceActivityName) {
         super.intervalDidStart(for: activity)
-        // New day started - reset daily counters
         NotificationCenter.default.post(
             name: .dailyMonitoringStarted,
             object: nil
@@ -82,7 +106,6 @@ class TerminusDeviceActivityMonitor: DeviceActivityMonitor {
 
     override func intervalDidEnd(for activity: DeviceActivityName) {
         super.intervalDidEnd(for: activity)
-        // Day ended - generate daily report
         NotificationCenter.default.post(
             name: .dailyMonitoringEnded,
             object: nil
@@ -94,13 +117,13 @@ class TerminusDeviceActivityMonitor: DeviceActivityMonitor {
         activity: DeviceActivityName
     ) {
         super.eventDidReachThreshold(event, activity: activity)
-        // Usage threshold reached - trigger warning
         NotificationCenter.default.post(
             name: .usageThresholdReached,
             object: event
         )
     }
 }
+#endif
 
 extension Notification.Name {
     static let dailyMonitoringStarted = Notification.Name("terminus.daily.started")

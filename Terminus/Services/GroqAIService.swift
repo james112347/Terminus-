@@ -1,21 +1,47 @@
 import Foundation
 
-/// Service for communicating with Groq AI API to generate wellness advice
+/// Service for communicating with Groq AI API to generate wellness advice.
+///
+/// API key is loaded from Secrets.plist (not committed to git).
+/// Setup: copy Secrets.plist.template -> Secrets.plist and add your key.
 final class GroqAIService: ObservableObject {
 
     static let shared = GroqAIService()
 
     private let baseURL = "https://api.groq.com/openai/v1/chat/completions"
     private let model = "llama-3.3-70b-versatile"
+    private let maxRetries = 3
 
+    /// API key loaded securely from Secrets.plist at runtime
     private var apiKey: String {
-        // Load from Secrets.plist or environment
-        guard let path = Bundle.main.path(forResource: "Secrets", ofType: "plist"),
-              let dict = NSDictionary(contentsOfFile: path),
-              let key = dict["GROQ_API_KEY"] as? String else {
-            return Config.groqAPIKey
+        // 1. Try Secrets.plist (recommended - file is in .gitignore)
+        if let path = Bundle.main.path(forResource: "Secrets", ofType: "plist"),
+           let dict = NSDictionary(contentsOfFile: path),
+           let key = dict["GROQ_API_KEY"] as? String,
+           !key.isEmpty,
+           key != "YOUR_GROQ_API_KEY_HERE" {
+            return key
         }
-        return key
+        // 2. Try environment variable (for CI/testing)
+        if let envKey = ProcessInfo.processInfo.environment["GROQ_API_KEY"],
+           !envKey.isEmpty {
+            return envKey
+        }
+        // 3. Try UserDefaults (set from Settings)
+        if let savedKey = UserDefaults.standard.string(forKey: "terminus.groq.apikey"),
+           !savedKey.isEmpty {
+            return savedKey
+        }
+        return ""
+    }
+
+    /// Allow setting API key from Settings UI
+    func setAPIKey(_ key: String) {
+        UserDefaults.standard.set(key, forKey: "terminus.groq.apikey")
+    }
+
+    var hasAPIKey: Bool {
+        !apiKey.isEmpty
     }
 
     @Published var isLoading: Bool = false
@@ -23,7 +49,7 @@ final class GroqAIService: ObservableObject {
 
     // MARK: - Wellness Analysis
 
-    /// Analyze usage data and generate wellness advice
+    /// Analyze usage data and generate wellness advice using Ralph Loop methodology
     func analyzeUsage(_ usageData: UsageAnalysisRequest) async throws -> WellnessAIResponse {
         let systemPrompt = """
         Sei un esperto di benessere digitale e neuroscienze. Analizza i dati di utilizzo \
@@ -41,7 +67,7 @@ final class GroqAIService: ObservableObject {
         - Plan: Piano d'azione concreto
         - Habituate: Suggerisci un'abitudine positiva da costruire
 
-        Rispondi SEMPRE in formato JSON valido con questa struttura:
+        Rispondi SEMPRE in formato JSON valido con questa struttura esatta (senza markdown, solo JSON puro):
         {
             "moodImpactScore": <1-100>,
             "brainHealthScore": <1-100>,
@@ -142,17 +168,12 @@ final class GroqAIService: ObservableObject {
         )
     }
 
-    // MARK: - Network Layer
+    // MARK: - Network Layer with Retry
 
     private func sendRequest(systemPrompt: String, userMessage: String) async throws -> String {
         guard !apiKey.isEmpty else {
             throw GroqError.missingAPIKey
         }
-
-        var request = URLRequest(url: URL(string: baseURL)!)
-        request.httpMethod = "POST"
-        request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
         let body: [String: Any] = [
             "model": model,
@@ -162,13 +183,54 @@ final class GroqAIService: ObservableObject {
             ],
             "temperature": 0.7,
             "max_tokens": 2048,
-            "top_p": 0.9
+            "top_p": 0.9,
+            "response_format": ["type": "json_object"]
         ]
 
-        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        let bodyData = try JSONSerialization.data(withJSONObject: body)
 
         await MainActor.run { self.isLoading = true }
         defer { Task { @MainActor in self.isLoading = false } }
+
+        // Retry with exponential backoff
+        var lastError: Error?
+        for attempt in 0..<maxRetries {
+            do {
+                return try await executeRequest(bodyData: bodyData)
+            } catch let error as GroqError {
+                // Don't retry on auth or parsing errors
+                switch error {
+                case .missingAPIKey, .parsingError:
+                    throw error
+                case .apiError(let code, _) where code == 401 || code == 403:
+                    throw error
+                default:
+                    lastError = error
+                }
+            } catch {
+                lastError = error
+            }
+
+            if attempt < maxRetries - 1 {
+                let delay = UInt64(pow(2.0, Double(attempt))) * 1_000_000_000
+                try await Task.sleep(nanoseconds: delay)
+            }
+        }
+
+        throw lastError ?? GroqError.invalidResponse
+    }
+
+    private func executeRequest(bodyData: Data) async throws -> String {
+        guard let url = URL(string: baseURL) else {
+            throw GroqError.invalidResponse
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = bodyData
+        request.timeoutInterval = 30
 
         let (data, response) = try await URLSession.shared.data(for: request)
 
@@ -193,18 +255,37 @@ final class GroqAIService: ObservableObject {
     }
 
     private func parseWellnessResponse(_ response: String) throws -> WellnessAIResponse {
-        // Extract JSON from response (handle markdown code blocks)
-        var jsonString = response
-        if let startRange = response.range(of: "{"),
-           let endRange = response.range(of: "}", options: .backwards) {
-            jsonString = String(response[startRange.lowerBound...endRange.upperBound])
+        // Extract JSON from response (handle possible markdown code blocks)
+        var jsonString = response.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        // Remove markdown code block markers if present
+        if jsonString.hasPrefix("```json") {
+            jsonString = String(jsonString.dropFirst(7))
+        } else if jsonString.hasPrefix("```") {
+            jsonString = String(jsonString.dropFirst(3))
+        }
+        if jsonString.hasSuffix("```") {
+            jsonString = String(jsonString.dropLast(3))
+        }
+        jsonString = jsonString.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        // Find the outermost JSON object
+        if let startIndex = jsonString.firstIndex(of: "{"),
+           let endIndex = jsonString.lastIndex(of: "}") {
+            jsonString = String(jsonString[startIndex...endIndex])
         }
 
         guard let data = jsonString.data(using: .utf8) else {
             throw GroqError.parsingError
         }
 
-        return try JSONDecoder().decode(WellnessAIResponse.self, from: data)
+        do {
+            return try JSONDecoder().decode(WellnessAIResponse.self, from: data)
+        } catch {
+            print("JSON parsing failed: \(error)")
+            print("Response was: \(jsonString.prefix(500))")
+            throw GroqError.parsingError
+        }
     }
 }
 
@@ -276,20 +357,13 @@ enum GroqError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .missingAPIKey:
-            return "API key Groq mancante. Configura la chiave nelle impostazioni."
+            return "API key Groq mancante. Vai in Impostazioni e inserisci la tua chiave API."
         case .invalidResponse:
-            return "Risposta non valida dal server."
+            return "Risposta non valida dal server Groq."
         case .apiError(let code, let message):
-            return "Errore API (\(code)): \(message)"
+            return "Errore API Groq (\(code)): \(message)"
         case .parsingError:
-            return "Errore nell'analisi della risposta AI."
+            return "Errore nell'analisi della risposta AI. Riprova."
         }
     }
-}
-
-// MARK: - Config
-
-enum Config {
-    /// Fallback API key - in production, use Secrets.plist
-    static let groqAPIKey = ""
 }

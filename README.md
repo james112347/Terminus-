@@ -9,6 +9,7 @@
 - **Mood & Brain Impact Scores** - Quantifies how screen time affects your emotional state and cognitive function
 - **Smart Notifications** - Alerts when you exceed limits, use phone late at night, or hit critical thresholds
 - **Historical Reports** - Weekly trends and daily breakdown with detailed category analysis
+- **In-App API Key Setup** - Configure your Groq API key directly from Settings
 
 ## Methodologies
 
@@ -33,10 +34,11 @@ Architectural framework: Build, Measure, Analyze, Decide
 
 ## Tech Stack
 
-- **Language**: Swift 5.9
-- **UI**: SwiftUI (iOS 17+)
+- **Language**: Swift 6.0
+- **UI**: SwiftUI (iOS 18+)
+- **Target Device**: iPhone 17 and later
 - **Architecture**: MVVM
-- **AI Backend**: Groq API (Llama 3.3 70B Versatile)
+- **AI Backend**: Groq API (Llama 3.3 70B Versatile) with retry + exponential backoff
 - **Screen Time**: DeviceActivity + FamilyControls frameworks
 - **Notifications**: UserNotifications framework
 - **Storage**: UserDefaults (local persistence)
@@ -58,12 +60,12 @@ Terminus/
 │   ├── ReportsView.swift          # Historical reports & trends
 │   ├── WellnessView.swift         # Brain health & Ralph Loop
 │   ├── ReportDetailView.swift     # Single report detail
-│   └── SettingsView.swift         # Goals, limits, methodology info
+│   └── SettingsView.swift         # Goals, limits, API key, methodology info
 ├── ViewModels/
 │   └── UsageMonitorViewModel.swift # Main ViewModel
 ├── Services/
-│   ├── ScreenTimeService.swift    # Apple Screen Time API
-│   ├── GroqAIService.swift        # Groq AI integration
+│   ├── ScreenTimeService.swift    # Apple Screen Time API (conditional compilation)
+│   ├── GroqAIService.swift        # Groq AI integration (retry + secure key loading)
 │   ├── UsageDataStore.swift       # Local data persistence
 │   ├── NotificationService.swift  # Push notifications
 │   └── WellnessEngine.swift       # Core analysis engine (GSD pipeline)
@@ -73,34 +75,61 @@ Terminus/
     └── Secrets.plist.template     # API key template
 ```
 
-## Setup
+## Setup for iPhone 17
 
 ### Prerequisites
-- Xcode 15+
-- iOS 17+ device (Screen Time APIs require a physical device)
-- Groq API key
+- Xcode 16+
+- iPhone 17 with iOS 18+
+- Apple Developer account (for FamilyControls entitlement)
+- Groq API key (free at console.groq.com)
 
 ### Installation
 
-1. Clone the repository
-2. Open `Terminus.xcodeproj` in Xcode
-3. Copy `Terminus/Resources/Secrets.plist.template` to `Terminus/Resources/Secrets.plist`
-4. Add your Groq API key to `Secrets.plist`
-5. Set your Development Team in Xcode signing settings
-6. Enable the "Family Controls" capability in your Apple Developer account
-7. Build and run on a physical iPhone
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/james112347/Terminus-.git
+   cd Terminus-
+   ```
 
-### API Key Setup
+2. Open `Terminus.xcodeproj` in Xcode 16+
 
-The app uses the Groq API for AI-powered wellness analysis. Get your key at [console.groq.com](https://console.groq.com).
+3. **Configure API Key** (choose one method):
 
-> **Security Note**: Never commit `Secrets.plist` to version control. It's already in `.gitignore`.
+   **Method A - In-App (Recommended):**
+   - Build and run the app
+   - Go to Settings tab
+   - Paste your Groq API key in the "Groq AI" section
+   - Tap "Salva Chiave API"
+
+   **Method B - Secrets.plist:**
+   - Copy `Terminus/Resources/Secrets.plist.template` to `Terminus/Resources/Secrets.plist`
+   - Replace `YOUR_GROQ_API_KEY_HERE` with your actual key
+   - Add `Secrets.plist` to your Xcode project (it's gitignored)
+
+4. **Xcode Signing:**
+   - Select the Terminus target
+   - Go to Signing & Capabilities
+   - Set your Development Team
+   - Enable "Family Controls" capability
+
+5. **Connect iPhone 17** and build (Cmd+R)
+
+### Groq API Key
+
+Get your free API key at [console.groq.com](https://console.groq.com):
+1. Create account
+2. Go to API Keys
+3. Create new key
+4. Copy and paste into the app
+
+> **Security**: The API key is stored locally on your device (UserDefaults) or in Secrets.plist (gitignored). It is never committed to the repository.
 
 ## Requirements
 
-- iOS 17.0+
-- iPhone only
+- iOS 18.0+
+- iPhone only (optimized for iPhone 17)
 - Physical device required for Screen Time features
+- Groq API key for AI analysis
 
 ## License
 
