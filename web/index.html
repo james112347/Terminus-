@@ -656,6 +656,15 @@ input[type="range"]::-webkit-slider-thumb {
         <div class="energy-factors" id="res-energy-factors"></div>
       </div>
 
+      <!-- Energy Analysis -->
+      <div class="card" id="res-energy-analysis-card" style="border-color:rgba(108,92,231,0.15); background:linear-gradient(135deg, rgba(108,92,231,0.04), rgba(61,193,211,0.03))">
+        <div class="result-section" style="margin-bottom:0">
+          <div class="card-title" style="color:var(--accent)">Analisi Energia</div>
+          <div class="result-text" id="res-energy-status" style="font-weight:600; margin-bottom:10px"></div>
+          <div id="res-energy-tips" style="font-size:12.5px; line-height:1.7; color:var(--text2)"></div>
+        </div>
+      </div>
+
       <!-- Diagnosis -->
       <div class="card">
         <div class="result-section" style="margin-bottom:0">
@@ -866,6 +875,19 @@ input[type="range"]::-webkit-slider-thumb {
       </div>
     </div>
 
+    <div class="ctx-group">
+      <div class="ctx-label">A che ora pensi di andare a dormire stasera?</div>
+      <div style="display:flex; align-items:center; gap:14px">
+        <input type="range" id="ctx-bedtime" min="20" max="28" step="0.5" value="23" style="flex:1"
+          oninput="updateBedtimeHint(this.value)">
+        <span id="ctx-bedtime-val" style="font-size:20px; font-weight:800; color:var(--accent); min-width:50px; text-align:right">23:00</span>
+      </div>
+      <div style="display:flex; justify-content:space-between; font-size:10px; color:var(--text3); margin-top:2px">
+        <span>20:00</span><span>00:00</span><span>04:00</span>
+      </div>
+      <div class="ctx-sleep-hint" id="ctx-bedtime-hint">Orario regolare. Il corpo riesce a mantenere un buon ritmo.</div>
+    </div>
+
     <div class="ctx-group" style="margin-bottom:24px">
       <div class="ctx-time-auto">
         <div class="ctx-time-dot"></div>
@@ -1025,12 +1047,15 @@ Estrai TUTTI i dati visibili e rispondi SOLO con JSON valido (senza markdown):
     const ctxStress = stressLabels[Number(ctx.stress) || 1];
     const ctxHydration = hydLabels[Number(ctx.hydration) || 1];
     const ctxTime = ctx.currentTime || '--:--';
+    const bedH = Number(ctx.bedtimeHour);
+    const ctxBedtime = !isNaN(bedH) ? (String(Math.floor(bedH >= 24 ? bedH-24 : bedH)).padStart(2,'0')+':'+(bedH%1===0.5?'30':'00')) : 'non specificato';
+    const ctxHoursLeft = ctx.hoursUntilBed ? Math.round(ctx.hoursUntilBed * 10) / 10 : null;
 
     const systemPrompt = `Sei un consulente di benessere digitale. Analizza i dati e rispondi in italiano con JSON puro.
 
 CONTESTO: L'utente ha usato il telefono ${totalMin} minuti su un obiettivo di ${goalMin}. Livello: ${severity}.
-STATO UTENTE: Ha dormito ${sleepH}h, attivita fisica: ${ctxActivity}, stress: ${ctxStress}, idratazione: ${ctxHydration}. Ora: ${ctxTime}.
-NOTA: Personalizza i consigli sullo stato reale. Se ha dormito poco (<6h), priorita al recupero. Se stress alto, suggerisci tecniche di decompressione senza schermo. Se nessuna attivita fisica, includi movimento come alternativa al telefono. Se idratazione scarsa (quasi niente/2-4 bicchieri), ricorda che la disidratazione riduce concentrazione ed energia mentale fino al 25%: suggerisci di bere piu acqua.
+STATO UTENTE: Ha dormito ${sleepH}h, attivita fisica: ${ctxActivity}, stress: ${ctxStress}, idratazione: ${ctxHydration}. Ora: ${ctxTime}. Bedtime previsto: ${ctxBedtime}${ctxHoursLeft ? ' (tra '+ctxHoursLeft+'h)' : ''}.
+NOTA: Personalizza i consigli sullo stato reale. Se ha dormito poco (<6h), priorita al recupero. Se stress alto, suggerisci tecniche di decompressione senza schermo. Se nessuna attivita fisica, includi movimento come alternativa al telefono. Se idratazione scarsa (quasi niente/2-4 bicchieri), ricorda che la disidratazione riduce concentrazione ed energia mentale fino al 25%: suggerisci di bere piu acqua. Se mancano poche ore al bedtime, suggerisci di ridurre uso schermo per favorire la produzione di melatonina. Se il bedtime e dopo mezzanotte, avvisa dell'impatto sul ritmo circadiano.
 
 ISTRUZIONI PER OGNI CAMPO (ogni campo ha uno scopo diverso - NON ripetere le stesse informazioni tra campi):
 
@@ -1165,14 +1190,35 @@ function updateSleepHint(val) {
   else hint.textContent = 'Sonno eccessivo. Potresti sentirti intorpidito.';
 }
 
+function updateBedtimeHint(val) {
+  const h = parseFloat(val);
+  const displayH = h >= 24 ? h - 24 : h;
+  const hh = String(Math.floor(displayH)).padStart(2,'0');
+  const mm = (displayH % 1 === 0.5) ? '30' : '00';
+  document.getElementById('ctx-bedtime-val').textContent = hh + ':' + mm;
+  const hint = document.getElementById('ctx-bedtime-hint');
+  if (h <= 21) hint.textContent = 'Molto presto. Ottimo per il recupero fisico e mentale.';
+  else if (h <= 22.5) hint.textContent = 'Orario sano. Buon allineamento col ritmo circadiano.';
+  else if (h <= 23.5) hint.textContent = 'Orario regolare. Il corpo riesce a mantenere un buon ritmo.';
+  else if (h <= 24.5) hint.textContent = 'Leggermente tardi. Potresti sentirti stanco domani.';
+  else if (h <= 26) hint.textContent = 'Tardi. Il ritmo circadiano ne risente, sonno meno riposante.';
+  else hint.textContent = 'Molto tardi. Privazione di sonno probabile, impatto forte su energia.';
+}
+
 function getContextData() {
   const sleepHours = parseFloat(document.getElementById('ctx-sleep').value) || 7;
   const activity = parseInt(document.querySelector('#ctx-activity .ctx-opt.selected')?.dataset.val) || 0;
   const stress = parseInt(document.querySelector('#ctx-stress .ctx-opt.selected')?.dataset.val) || 1;
   const hydration = parseInt(document.querySelector('#ctx-hydration .ctx-opt.selected')?.dataset.val) || 1;
+  const bedtimeRaw = parseFloat(document.getElementById('ctx-bedtime').value) || 23;
+  const bedtimeHour = bedtimeRaw >= 24 ? bedtimeRaw - 24 : bedtimeRaw;
   const currentHour = new Date().getHours();
-  const currentTime = String(currentHour).padStart(2,'0') + ':' + String(new Date().getMinutes()).padStart(2,'0');
-  return { sleepHours, activity, stress, hydration, currentHour, currentTime };
+  const currentMin = new Date().getMinutes();
+  const currentTime = String(currentHour).padStart(2,'0') + ':' + String(currentMin).padStart(2,'0');
+  // Calculate remaining hours until bedtime
+  let hoursUntilBed = bedtimeRaw - currentHour - (currentMin / 60);
+  if (hoursUntilBed < 0) hoursUntilBed += 24;
+  return { sleepHours, activity, stress, hydration, bedtimeHour, hoursUntilBed, currentHour, currentTime };
 }
 
 function showContextPopup(type) {
@@ -1357,6 +1403,18 @@ function displayResults(report) {
     resBar.style.background = `linear-gradient(90deg, ${startColor}, ${eColor})`;
 
     document.getElementById('res-energy-factors').innerHTML = buildEnergyFactorsHTML(report);
+
+    // Energy analysis with personalized tips
+    const eAnalysis = buildEnergyAnalysis(report);
+    document.getElementById('res-energy-status').textContent = eAnalysis.status;
+    document.getElementById('res-energy-status').style.color = eColor;
+    if (eAnalysis.tips.length > 0) {
+      document.getElementById('res-energy-tips').innerHTML = eAnalysis.tips.map(t =>
+        `<div style="padding:6px 0; border-bottom:1px solid var(--border); display:flex; gap:8px; align-items:flex-start"><span style="color:var(--accent); font-weight:700; flex-shrink:0">›</span> ${t}</div>`
+      ).join('');
+    } else {
+      document.getElementById('res-energy-tips').innerHTML = '<div style="color:var(--green); font-weight:600">Ottimo stato! Continua cosi.</div>';
+    }
   } catch(e) {}
 
   // Color the wellness score
@@ -1606,16 +1664,26 @@ function calculateEnergy(report) {
       goalDrain = -Math.min(5, (goalMin - totalMin) / goalMin * 8);
     }
 
-    // 9. RITMO CIRCADIANO → leggera modifica
+    // 9. RITMO CIRCADIANO → basato su ora + bedtime
     const curHour = Number(ctx.currentHour) || new Date().getHours();
+    const hoursUntilBed = Number(ctx.hoursUntilBed) || 8;
     let circadianMult = 1.0;
     if (curHour >= 22 || curHour < 6) circadianMult = 1.15;
     else if (curHour >= 13 && curHour < 15) circadianMult = 1.05;
     else if (curHour >= 20) circadianMult = 1.08;
 
+    // 10. BEDTIME → se vai a letto tardi, il drain del telefono pesa di piu
+    // Andare a letto dopo mezzanotte amplifica la stanchezza percepita
+    const bedH = Number(ctx.bedtimeHour);
+    let bedtimePenalty = 0;
+    if (!isNaN(bedH)) {
+      if (bedH >= 0 && bedH < 5) bedtimePenalty = 6 + (bedH * 1.5); // 0:00→6, 2:00→9, 4:00→12
+      else if (bedH >= 24) bedtimePenalty = 6; // wrapped past midnight
+    }
+
     // Calcolo finale
     const startEnergy = Math.min(100, baseline + activityBonus + hydrationBonus);
-    const totalDrain = (durationDrain + contentDrain + fragmentDrain + goalDrain) * stressMultiplier * circadianMult;
+    const totalDrain = (durationDrain + contentDrain + fragmentDrain + goalDrain + bedtimePenalty) * stressMultiplier * circadianMult;
     const energy = startEnergy - totalDrain;
 
     const result = Math.round(Math.max(0, Math.min(100, energy)));
@@ -1653,7 +1721,15 @@ function getEnergyBreakdown(report) {
   }
   const stressL = ['Basso','Medio','Alto'][Number(ctx.stress)||1];
   const stressM = [0.85,1.0,1.15][Number(ctx.stress)||1];
-  return { startE, baseline, actBonus, hydBonus, hydLabel, dDrain, cDrain, fDrain, gDrain, stressL, stressM, sleep, totalMin, goalMin };
+  const bedH = Number(ctx.bedtimeHour);
+  let bDrain = 0;
+  if (!isNaN(bedH)) {
+    if (bedH >= 0 && bedH < 5) bDrain = Math.round(6 + bedH * 1.5);
+    else if (bedH >= 24) bDrain = 6;
+  }
+  const bedLabel = !isNaN(bedH) ? (String(Math.floor(bedH >= 24 ? bedH-24 : bedH)).padStart(2,'0')+':'+(bedH%1===0.5?'30':'00')) : null;
+  const hoursUntilBed = Number(ctx.hoursUntilBed) || null;
+  return { startE, baseline, actBonus, hydBonus, hydLabel, dDrain, cDrain, fDrain, gDrain, bDrain, bedLabel, hoursUntilBed, stressL, stressM, sleep, totalMin, goalMin };
 }
 
 function buildEnergyFactorsHTML(report) {
@@ -1666,8 +1742,85 @@ function buildEnergyFactorsHTML(report) {
     <div class="energy-factor"><div class="energy-factor-dot" style="background:#a855f7"></div>Contenuti: -${b.cDrain}</div>
     <div class="energy-factor"><div class="energy-factor-dot" style="background:#f0883e"></div>Interruzioni: -${b.fDrain}</div>
     <div class="energy-factor"><div class="energy-factor-dot" style="background:${b.totalMin > b.goalMin ? '#e74c6f' : '#26c281'}"></div>Obiettivo: ${b.totalMin > b.goalMin ? '-'+b.gDrain : '+bonus'}</div>
+    ${b.bDrain > 0 ? `<div class="energy-factor"><div class="energy-factor-dot" style="background:#6c5ce7"></div>Bedtime ${b.bedLabel}: -${b.bDrain}</div>` : ''}
     ${b.stressM !== 1.0 ? `<div class="energy-factor"><div class="energy-factor-dot" style="background:#e84393"></div>Stress ${b.stressL}: x${b.stressM}</div>` : ''}
   `;
+}
+
+function buildEnergyAnalysis(report) {
+  const b = getEnergyBreakdown(report);
+  const energy = (report.energy != null) ? report.energy : calculateEnergy(report);
+  const ctx = report.context || state.context || {};
+  const hoursLeft = Number(ctx.hoursUntilBed) || null;
+  const sleep = b.sleep;
+  const hydVal = Number(ctx.hydration) || 1;
+  const actVal = Number(ctx.activity) || 0;
+  const stressVal = Number(ctx.stress) || 1;
+
+  // Status message based on energy level + remaining time
+  let status = '';
+  if (energy >= 75) {
+    status = `La tua energia e alta (${energy}%). Sei in un buon stato psicofisico.`;
+  } else if (energy >= 55) {
+    status = `Energia discreta (${energy}%). Ancora funzionale ma in calo.`;
+  } else if (energy >= 35) {
+    status = `Energia moderata (${energy}%). Inizi a sentire la stanchezza mentale.`;
+  } else if (energy >= 15) {
+    status = `Energia bassa (${energy}%). Concentrazione e umore ne risentono.`;
+  } else {
+    status = `Energia quasi esaurita (${energy}%). Hai bisogno di recuperare.`;
+  }
+
+  if (hoursLeft !== null && hoursLeft > 0) {
+    const hh = Math.floor(hoursLeft);
+    const mm = Math.round((hoursLeft - hh) * 60);
+    status += ` Ti restano circa ${hh}h${mm > 0 ? mm + 'min' : ''} prima di andare a dormire.`;
+  }
+
+  // Personalized tips based on all factors
+  let tips = [];
+
+  // Sleep-based tips
+  if (sleep < 5) tips.push('Hai dormito molto poco. Evita caffeina dopo le 14 e prova un power nap di 20 min se possibile.');
+  else if (sleep < 6.5) tips.push('Sonno sotto la media. Cerca di andare a letto prima stasera per recuperare.');
+
+  // Hydration tips
+  if (hydVal === 0) tips.push('Sei molto disidratato. Bevi subito 2 bicchieri d\'acqua: la disidratazione riduce la concentrazione fino al 25%.');
+  else if (hydVal === 1) tips.push('Idratazione appena sufficiente. Prova a bere un bicchiere d\'acqua ogni ora per il resto della giornata.');
+
+  // Activity tips
+  if (actVal === 0 && energy < 60) tips.push('Non hai fatto attivita fisica. Anche 10 minuti di camminata possono darti un boost di energia immediato.');
+
+  // Stress tips
+  if (stressVal === 2) tips.push('Lo stress alto amplifica l\'effetto negativo del telefono. Prova 5 minuti di respirazione profonda (4s inspira, 7s trattieni, 8s espira).');
+
+  // Screen-based tips
+  if (b.dDrain > 25) tips.push('Uso schermo prolungato. Fai la regola 20-20-20: ogni 20 min guarda qualcosa a 20 metri per 20 secondi.');
+  else if (b.dDrain > 15) tips.push('Uso schermo nella media. Cerca di fare pause piu frequenti nell\'ultima parte della giornata.');
+
+  // Content tips
+  if (b.cDrain > 8) tips.push('Contenuti ad alto drain (social/intrattenimento). Prova a sostituire 15 min con musica, podcast o lettura.');
+
+  // Goal tips
+  if (b.gDrain > 5) tips.push('Hai superato di molto il tuo obiettivo giornaliero. Imposta un timer per le prossime sessioni.');
+
+  // Bedtime tips
+  const bedH = Number(ctx.bedtimeHour);
+  if (!isNaN(bedH) && (bedH >= 0 && bedH < 5 || bedH > 24.5)) {
+    tips.push('Andare a letto cosi tardi compromette il ritmo circadiano. La luce blu del telefono prima di dormire ritarda la melatonina di 30-90 min.');
+  }
+
+  // Time-aware tips
+  if (hoursLeft !== null && hoursLeft < 2 && energy < 40) {
+    tips.push('Manca poco a dormire e l\'energia e bassa. Smetti di usare il telefono, la luce blu peggiorerebbe il sonno.');
+  } else if (hoursLeft !== null && hoursLeft > 5 && energy < 30) {
+    tips.push('Hai ancora molte ore davanti ma poca energia. Priorita: pausa dallo schermo, idratazione e movimento.');
+  }
+
+  // Limit to 4 most relevant tips
+  tips = tips.slice(0, 4);
+
+  return { status, tips };
 }
 
 function energyLabel(e) {
