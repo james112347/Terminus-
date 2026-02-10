@@ -281,6 +281,58 @@ body {
 .history-detail { font-size: 11px; color: var(--text3); font-weight: 500; margin-top: 2px; }
 .history-score { font-size: 22px; font-weight: 800; letter-spacing: -0.5px; }
 
+/* Profile */
+.profile-header { text-align: center; padding: 20px 0 8px; }
+.profile-avatar {
+  width: 64px; height: 64px; border-radius: 50%; margin: 0 auto 10px;
+  background: linear-gradient(135deg, var(--accent), #a855f7);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 24px; font-weight: 800; color: white;
+}
+.profile-name { font-size: 18px; font-weight: 800; letter-spacing: -0.3px; }
+.profile-subtitle { font-size: 12px; color: var(--text3); margin-top: 2px; }
+.profile-tags { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-top: 10px; }
+.profile-tag {
+  font-size: 11px; font-weight: 600; padding: 4px 10px;
+  border-radius: 20px; background: var(--accent-light); color: var(--accent);
+}
+.profile-section-title {
+  font-size: 12px; font-weight: 700; color: var(--text3);
+  text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 10px;
+}
+.profile-field {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 0; border-bottom: 1px solid var(--bg3);
+}
+.profile-field:last-child { border-bottom: none; }
+.profile-field-label { font-size: 13px; color: var(--text2); }
+.profile-field-value { font-size: 13px; font-weight: 600; color: var(--text); }
+.profile-select {
+  appearance: none; background: var(--bg3); border: 1px solid var(--card-border);
+  border-radius: 10px; padding: 10px 14px; font-size: 13px; font-weight: 600;
+  color: var(--text); width: 100%; outline: none; cursor: pointer;
+}
+.profile-select:focus { border-color: var(--accent); }
+.profile-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.profile-chip {
+  font-size: 11px; font-weight: 600; padding: 6px 12px;
+  border-radius: 20px; background: var(--bg3); color: var(--text2);
+  border: 1px solid var(--card-border); cursor: pointer; transition: all 0.15s;
+}
+.profile-chip:active { transform: scale(0.96); }
+.profile-chip.selected { background: var(--accent-light); color: var(--accent); border-color: var(--accent); }
+.profile-feedback {
+  padding: 12px; border-radius: 12px; margin-top: 8px;
+  font-size: 12px; line-height: 1.5;
+}
+.profile-feedback.positive { background: rgba(38,194,129,0.08); color: #1a9b6a; }
+.profile-feedback.negative { background: rgba(240,136,62,0.08); color: #c06520; }
+.profile-slider-row {
+  display: flex; align-items: center; gap: 12px; margin-top: 6px;
+}
+.profile-slider-row input[type=range] { flex: 1; }
+.profile-slider-val { font-size: 18px; font-weight: 800; color: var(--accent); min-width: 50px; text-align: right; }
+
 /* Settings */
 .setting-row {
   display: flex; align-items: center; justify-content: space-between;
@@ -727,6 +779,187 @@ input[type="range"]::-webkit-slider-thumb {
   </div>
 
   <!-- ===== SETTINGS TAB ===== -->
+  <!-- PROFILE TAB -->
+  <div id="tab-profile" class="tab-content">
+    <div class="fade-up">
+      <!-- Profile Header -->
+      <div class="card">
+        <div class="profile-header">
+          <div class="profile-avatar" id="profile-avatar">?</div>
+          <div class="profile-name" id="profile-display-name">Completa il tuo profilo</div>
+          <div class="profile-subtitle" id="profile-display-subtitle">Per analisi AI personalizzate</div>
+          <div class="profile-tags" id="profile-display-tags"></div>
+        </div>
+      </div>
+
+      <!-- Name & Age -->
+      <div class="card">
+        <div class="profile-section-title">Chi sei</div>
+        <div style="margin-bottom:10px">
+          <input id="profile-name" type="text" placeholder="Il tuo nome" autocomplete="off"
+            style="width:100%; padding:12px; background:var(--bg3); border:1px solid var(--card-border); border-radius:10px; color:var(--text); font-size:14px; font-weight:600; outline:none"
+            oninput="updateProfilePreview()" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--card-border)'">
+        </div>
+        <div class="profile-field">
+          <span class="profile-field-label">Fascia d'eta</span>
+        </div>
+        <select id="profile-age" class="profile-select" onchange="updateProfilePreview()">
+          <option value="13-17">13-17 anni</option>
+          <option value="18-25">18-25 anni</option>
+          <option value="26-35" selected>26-35 anni</option>
+          <option value="36-45">36-45 anni</option>
+          <option value="46-60">46-60 anni</option>
+          <option value="60+">60+ anni</option>
+        </select>
+      </div>
+
+      <!-- Work -->
+      <div class="card">
+        <div class="profile-section-title">Lavoro</div>
+        <div class="profile-field"><span class="profile-field-label">Occupazione</span></div>
+        <select id="profile-occupation" class="profile-select" onchange="updateProfilePreview()">
+          <option value="studente">Studente</option>
+          <option value="dipendente" selected>Lavoratore dipendente</option>
+          <option value="freelance">Freelance</option>
+          <option value="imprenditore">Imprenditore</option>
+          <option value="disoccupato">Disoccupato</option>
+          <option value="casalingo">Casalingo/a</option>
+          <option value="pensionato">Pensionato/a</option>
+        </select>
+        <div class="profile-field" style="margin-top:10px"><span class="profile-field-label">Orario lavoro</span></div>
+        <select id="profile-schedule" class="profile-select" onchange="updateProfilePreview()">
+          <option value="standard" selected>Standard (9-18)</option>
+          <option value="turni">Turni</option>
+          <option value="flessibile">Flessibile</option>
+          <option value="notturno">Notturno</option>
+          <option value="part-time">Part-time</option>
+          <option value="non-lavoro">Non lavoro</option>
+        </select>
+      </div>
+
+      <!-- Sleep -->
+      <div class="card">
+        <div class="profile-section-title">Sonno</div>
+        <div class="profile-field"><span class="profile-field-label">A che ora ti svegli?</span></div>
+        <div class="profile-slider-row">
+          <input type="range" id="profile-wake" min="4" max="12" step="1" value="7" oninput="updateSleepProfile()">
+          <span class="profile-slider-val" id="profile-wake-val">7:00</span>
+        </div>
+        <div class="profile-field" style="margin-top:12px"><span class="profile-field-label">A che ora vai a dormire?</span></div>
+        <div class="profile-slider-row">
+          <input type="range" id="profile-bed" min="20" max="28" step="1" value="23" oninput="updateSleepProfile()">
+          <span class="profile-slider-val" id="profile-bed-val">23:00</span>
+        </div>
+        <div id="profile-sleep-feedback"></div>
+        <div class="profile-field" style="margin-top:12px"><span class="profile-field-label">Sei un...</span></div>
+        <div class="profile-chips" id="profile-chronotype">
+          <div class="profile-chip" data-val="mattiniero" onclick="profileChipSelect('profile-chronotype',this)">Mattiniero</div>
+          <div class="profile-chip selected" data-val="neutro" onclick="profileChipSelect('profile-chronotype',this)">Neutro</div>
+          <div class="profile-chip" data-val="nottambulo" onclick="profileChipSelect('profile-chronotype',this)">Nottambulo</div>
+        </div>
+      </div>
+
+      <!-- Lifestyle -->
+      <div class="card">
+        <div class="profile-section-title">Stile di vita</div>
+        <div class="profile-field"><span class="profile-field-label">Con chi vivi?</span></div>
+        <div class="profile-chips" id="profile-social">
+          <div class="profile-chip selected" data-val="solo" onclick="profileChipSelect('profile-social',this)">Da solo/a</div>
+          <div class="profile-chip" data-val="coppia" onclick="profileChipSelect('profile-social',this)">In coppia</div>
+          <div class="profile-chip" data-val="famiglia" onclick="profileChipSelect('profile-social',this)">Famiglia</div>
+          <div class="profile-chip" data-val="coinquilini" onclick="profileChipSelect('profile-social',this)">Coinquilini</div>
+        </div>
+
+        <div class="profile-field" style="margin-top:12px"><span class="profile-field-label">Attivita fisica</span></div>
+        <div class="profile-chips" id="profile-activity">
+          <div class="profile-chip" data-val="sedentario" onclick="profileChipSelect('profile-activity',this); updateProfileFeedback()">Sedentario</div>
+          <div class="profile-chip" data-val="leggero" onclick="profileChipSelect('profile-activity',this); updateProfileFeedback()">Leggero</div>
+          <div class="profile-chip selected" data-val="moderato" onclick="profileChipSelect('profile-activity',this); updateProfileFeedback()">Moderato</div>
+          <div class="profile-chip" data-val="attivo" onclick="profileChipSelect('profile-activity',this); updateProfileFeedback()">Attivo</div>
+          <div class="profile-chip" data-val="molto-attivo" onclick="profileChipSelect('profile-activity',this); updateProfileFeedback()">Molto attivo</div>
+        </div>
+        <div id="profile-activity-feedback"></div>
+
+        <div class="profile-field" style="margin-top:12px"><span class="profile-field-label">Livello stress</span></div>
+        <div class="profile-chips" id="profile-stress">
+          <div class="profile-chip" data-val="molto-basso" onclick="profileChipSelect('profile-stress',this); updateProfileFeedback()">Molto basso</div>
+          <div class="profile-chip" data-val="basso" onclick="profileChipSelect('profile-stress',this); updateProfileFeedback()">Basso</div>
+          <div class="profile-chip selected" data-val="moderato" onclick="profileChipSelect('profile-stress',this); updateProfileFeedback()">Moderato</div>
+          <div class="profile-chip" data-val="alto" onclick="profileChipSelect('profile-stress',this); updateProfileFeedback()">Alto</div>
+          <div class="profile-chip" data-val="molto-alto" onclick="profileChipSelect('profile-stress',this); updateProfileFeedback()">Molto alto</div>
+        </div>
+        <div id="profile-stress-feedback"></div>
+
+        <div class="profile-field" style="margin-top:12px"><span class="profile-field-label">Personalita</span></div>
+        <div class="profile-chips" id="profile-personality">
+          <div class="profile-chip" data-val="introverso" onclick="profileChipSelect('profile-personality',this)">Introverso</div>
+          <div class="profile-chip selected" data-val="ambiverso" onclick="profileChipSelect('profile-personality',this)">Ambiverso</div>
+          <div class="profile-chip" data-val="estroverso" onclick="profileChipSelect('profile-personality',this)">Estroverso</div>
+        </div>
+      </div>
+
+      <!-- Digital Habits -->
+      <div class="card">
+        <div class="profile-section-title">Abitudini digitali</div>
+        <p style="font-size:12px; color:var(--text3); margin-bottom:10px">Seleziona le attivita principali</p>
+        <div class="profile-chips" id="profile-digital">
+          <div class="profile-chip" data-val="scrolling" onclick="profileChipToggle(this); updateProfileFeedback()">Scrolling social</div>
+          <div class="profile-chip" data-val="messaggistica" onclick="profileChipToggle(this)">Messaggistica</div>
+          <div class="profile-chip" data-val="gaming" onclick="profileChipToggle(this); updateProfileFeedback()">Gaming</div>
+          <div class="profile-chip" data-val="streaming" onclick="profileChipToggle(this)">Streaming</div>
+          <div class="profile-chip" data-val="notizie" onclick="profileChipToggle(this)">Notizie</div>
+          <div class="profile-chip" data-val="lavoro" onclick="profileChipToggle(this)">Email/Lavoro</div>
+          <div class="profile-chip" data-val="apprendimento" onclick="profileChipToggle(this); updateProfileFeedback()">Apprendimento</div>
+          <div class="profile-chip" data-val="shopping" onclick="profileChipToggle(this)">Shopping</div>
+        </div>
+        <div id="profile-digital-feedback"></div>
+      </div>
+
+      <!-- Goals -->
+      <div class="card">
+        <div class="profile-section-title">I tuoi obiettivi</div>
+        <p style="font-size:12px; color:var(--text3); margin-bottom:10px">Seleziona cosa vuoi migliorare</p>
+        <div class="profile-chips" id="profile-goals">
+          <div class="profile-chip" data-val="ridurre-social" onclick="profileChipToggle(this)">Ridurre social</div>
+          <div class="profile-chip" data-val="dormire-meglio" onclick="profileChipToggle(this)">Dormire meglio</div>
+          <div class="profile-chip" data-val="produttivita" onclick="profileChipToggle(this)">Piu produttivita</div>
+          <div class="profile-chip" data-val="meno-ansia" onclick="profileChipToggle(this)">Meno ansia</div>
+          <div class="profile-chip" data-val="attivita-fisica" onclick="profileChipToggle(this)">Piu attivita fisica</div>
+          <div class="profile-chip" data-val="concentrazione" onclick="profileChipToggle(this)">Piu concentrazione</div>
+          <div class="profile-chip" data-val="digital-detox" onclick="profileChipToggle(this)">Digital detox</div>
+          <div class="profile-chip" data-val="equilibrio" onclick="profileChipToggle(this)">Vita equilibrata</div>
+        </div>
+      </div>
+
+      <!-- Tempo libero -->
+      <div class="card">
+        <div class="profile-section-title">Tempo libero</div>
+        <p style="font-size:12px; color:var(--text3); margin-bottom:10px">Cosa fai offline?</p>
+        <div class="profile-chips" id="profile-hobbies">
+          <div class="profile-chip" data-val="sport" onclick="profileChipToggle(this)">Sport</div>
+          <div class="profile-chip" data-val="lettura" onclick="profileChipToggle(this)">Lettura</div>
+          <div class="profile-chip" data-val="socializzare" onclick="profileChipToggle(this)">Socializzare</div>
+          <div class="profile-chip" data-val="natura" onclick="profileChipToggle(this)">Natura</div>
+          <div class="profile-chip" data-val="cucina" onclick="profileChipToggle(this)">Cucina</div>
+          <div class="profile-chip" data-val="musica" onclick="profileChipToggle(this)">Musica</div>
+          <div class="profile-chip" data-val="hobby-manuali" onclick="profileChipToggle(this)">Hobby manuali</div>
+          <div class="profile-chip" data-val="meditazione" onclick="profileChipToggle(this)">Meditazione</div>
+        </div>
+      </div>
+
+      <!-- Save Button -->
+      <button class="btn btn-primary" onclick="saveProfile()" style="margin-bottom:12px">
+        Salva Profilo
+      </button>
+
+      <!-- Health Feedback Summary -->
+      <div class="card" id="profile-feedback-summary" style="display:none">
+        <div class="profile-section-title" style="color:var(--accent)">Valutazione Abitudini</div>
+        <div id="profile-feedback-content"></div>
+      </div>
+    </div>
+  </div>
+
   <div id="tab-settings" class="tab-content">
     <div class="fade-up">
       <!-- API Key -->
@@ -799,6 +1032,10 @@ input[type="range"]::-webkit-slider-thumb {
   <button class="tab-btn" onclick="switchTab('history')" data-tab="history">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
     <span>Storico</span>
+  </button>
+  <button class="tab-btn" onclick="switchTab('profile')" data-tab="profile">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+    <span>Profilo</span>
   </button>
   <button class="tab-btn" onclick="switchTab('settings')" data-tab="settings">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><circle cx="12" cy="12" r="3"/></svg>
@@ -930,13 +1167,14 @@ let state = {
   latestReport: null,
   history: [],
   goal: 120,
-  context: null
+  context: null,
+  profile: null
 };
 
 // ============ STORAGE ============
 const Storage = {
   save() {
-    const data = { history: state.history, goal: state.goal };
+    const data = { history: state.history, goal: state.goal, profile: state.profile };
     localStorage.setItem('terminus_data', JSON.stringify(data));
   },
   load() {
@@ -945,6 +1183,7 @@ const Storage = {
       if (data) {
         state.history = data.history || [];
         state.goal = data.goal || 120;
+        state.profile = data.profile || null;
       }
     } catch(e) {}
   },
@@ -1055,7 +1294,8 @@ Estrai TUTTI i dati visibili e rispondi SOLO con JSON valido (senza markdown):
 
 CONTESTO: L'utente ha usato il telefono ${totalMin} minuti su un obiettivo di ${goalMin}. Livello: ${severity}.
 STATO UTENTE: Ha dormito ${sleepH}h, attivita fisica: ${ctxActivity}, stress: ${ctxStress}, idratazione: ${ctxHydration}. Ora: ${ctxTime}. Bedtime previsto: ${ctxBedtime}${ctxHoursLeft ? ' (tra '+ctxHoursLeft+'h)' : ''}.
-NOTA: Personalizza i consigli sullo stato reale. Se ha dormito poco (<6h), priorita al recupero. Se stress alto, suggerisci tecniche di decompressione senza schermo. Se nessuna attivita fisica, includi movimento come alternativa al telefono. Se idratazione scarsa (quasi niente/2-4 bicchieri), ricorda che la disidratazione riduce concentrazione ed energia mentale fino al 25%: suggerisci di bere piu acqua. Se mancano poche ore al bedtime, suggerisci di ridurre uso schermo per favorire la produzione di melatonina. Se il bedtime e dopo mezzanotte, avvisa dell'impatto sul ritmo circadiano.
+${getProfileContext()}
+NOTA: Personalizza i consigli sullo stato reale e sul profilo utente. Se ha dormito poco (<6h), priorita al recupero. Se stress alto, suggerisci tecniche di decompressione senza schermo. Se nessuna attivita fisica, includi movimento come alternativa al telefono. Se idratazione scarsa (quasi niente/2-4 bicchieri), ricorda che la disidratazione riduce concentrazione ed energia mentale fino al 25%: suggerisci di bere piu acqua. Se mancano poche ore al bedtime, suggerisci di ridurre uso schermo per favorire la produzione di melatonina. Se il bedtime e dopo mezzanotte, avvisa dell'impatto sul ritmo circadiano. Se il profilo utente e disponibile, usa hobby e obiettivi per suggerire alternative personalizzate.
 
 ISTRUZIONI PER OGNI CAMPO (ogni campo ha uno scopo diverso - NON ripetere le stesse informazioni tra campi):
 
@@ -1227,6 +1467,44 @@ function showContextPopup(type) {
   const now = new Date();
   document.getElementById('ctx-current-time').textContent =
     String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
+
+  // Pre-fill context from profile if available
+  const prof = state.profile;
+  if (prof) {
+    // Pre-fill sleep from profile schedule
+    if (prof.wakeTime != null && prof.bedTime != null) {
+      const bed = prof.bedTime >= 24 ? prof.bedTime - 24 : prof.bedTime;
+      const sleepH = prof.wakeTime <= bed ? (24 - bed + prof.wakeTime) : (prof.wakeTime - bed);
+      document.getElementById('ctx-sleep').value = sleepH;
+      updateSleepHint(sleepH);
+    }
+    // Pre-fill activity from profile
+    if (prof.activity) {
+      const actMap = { 'sedentario': '0', 'leggero': '1', 'moderato': '2', 'attivo': '2', 'molto-attivo': '3' };
+      const actVal = actMap[prof.activity];
+      if (actVal) {
+        document.querySelectorAll('#ctx-activity .ctx-opt').forEach(o => o.classList.remove('selected'));
+        const opt = document.querySelector(`#ctx-activity .ctx-opt[data-val="${actVal}"]`);
+        if (opt) opt.classList.add('selected');
+      }
+    }
+    // Pre-fill stress from profile
+    if (prof.stress) {
+      const stressMap = { 'molto-basso': '0', 'basso': '0', 'moderato': '1', 'alto': '2', 'molto-alto': '2' };
+      const stressVal = stressMap[prof.stress];
+      if (stressVal) {
+        document.querySelectorAll('#ctx-stress .ctx-opt').forEach(o => o.classList.remove('selected'));
+        const opt = document.querySelector(`#ctx-stress .ctx-opt[data-val="${stressVal}"]`);
+        if (opt) opt.classList.add('selected');
+      }
+    }
+    // Pre-fill bedtime from profile
+    if (prof.bedTime != null) {
+      document.getElementById('ctx-bedtime').value = prof.bedTime;
+      updateBedtimeHint(prof.bedTime);
+    }
+  }
+
   document.getElementById('context-modal').classList.add('show');
 }
 
@@ -1608,11 +1886,18 @@ function catInitial(type) {
 function calculateEnergy(report) {
   try {
     const ctx = report.context || state.context || {};
+    const prof = state.profile || {};
     const totalMin = Number(report.totalMinutes) || 0;
     const goalMin = Number(report.goal) || Number(state.goal) || 120;
 
     // 1. SONNO → baseline (il fattore piu importante)
-    const sleep = Number(ctx.sleepHours) || 7;
+    // Use context if available, otherwise derive from profile sleep schedule
+    let sleep = Number(ctx.sleepHours);
+    if (!sleep && prof.wakeTime != null && prof.bedTime != null) {
+      const bed = prof.bedTime >= 24 ? prof.bedTime - 24 : prof.bedTime;
+      sleep = prof.wakeTime <= bed ? (24 - bed + prof.wakeTime) : (prof.wakeTime - bed);
+    }
+    if (!sleep) sleep = 7;
     let baseline;
     if (sleep <= 3) baseline = 35;
     else if (sleep <= 4) baseline = 48;
@@ -1623,16 +1908,26 @@ function calculateEnergy(report) {
     else if (sleep <= 9) baseline = 98;
     else baseline = 95;
 
-    // 2. ATTIVITA FISICA → bonus energia
-    const activityBonus = [0, 6, 10, 5][Number(ctx.activity) || 0];
+    // 2. ATTIVITA FISICA → bonus energia (profile fallback)
+    let activityIdx = Number(ctx.activity);
+    if (isNaN(activityIdx) && prof.activity) {
+      const profActMap = { 'sedentario': 0, 'leggero': 1, 'moderato': 2, 'attivo': 2, 'molto-attivo': 3 };
+      activityIdx = profActMap[prof.activity] ?? 0;
+    }
+    const activityBonus = [0, 6, 10, 5][activityIdx || 0];
 
     // 3. IDRATAZIONE → bonus/penalita cognitiva
     // Disidratazione riduce concentrazione e energia fino al 25% (studi neuroscienza)
     // 0=quasi niente(-8), 1=2-4 bicchieri(0), 2=5-7 bicchieri(+5), 3=8+(+8)
     const hydrationBonus = [-8, 0, 5, 8][Number(ctx.hydration) || 1];
 
-    // 4. STRESS → amplifica il drain (ridotto)
-    const stressMultiplier = [0.85, 1.0, 1.15][Number(ctx.stress) || 1];
+    // 4. STRESS → amplifica il drain (profile fallback)
+    let stressIdx = Number(ctx.stress);
+    if (isNaN(stressIdx) && prof.stress) {
+      const profStressMap = { 'molto-basso': 0, 'basso': 0, 'moderato': 1, 'alto': 2, 'molto-alto': 2 };
+      stressIdx = profStressMap[prof.stress] ?? 1;
+    }
+    const stressMultiplier = [0.85, 1.0, 1.15][stressIdx || 1];
 
     // 5. DURATA SCHERMO → sigmoide (satura a ~35, punto medio a 5h)
     const hours = totalMin / 60;
@@ -1674,7 +1969,11 @@ function calculateEnergy(report) {
 
     // 10. BEDTIME → se vai a letto tardi, il drain del telefono pesa di piu
     // Andare a letto dopo mezzanotte amplifica la stanchezza percepita
-    const bedH = Number(ctx.bedtimeHour);
+    // Use context bedtime, fallback to profile bedtime
+    let bedH = Number(ctx.bedtimeHour);
+    if (isNaN(bedH) && prof.bedTime != null) {
+      bedH = prof.bedTime >= 24 ? prof.bedTime - 24 : prof.bedTime;
+    }
     let bedtimePenalty = 0;
     if (!isNaN(bedH)) {
       if (bedH >= 0 && bedH < 5) bedtimePenalty = 6 + (bedH * 1.5); // 0:00→6, 2:00→9, 4:00→12
@@ -1840,6 +2139,266 @@ function energyColor(e) {
   return '#e74c6f';
 }
 
+// ============ PROFILE ============
+function profileChipSelect(groupId, el) {
+  document.querySelectorAll('#' + groupId + ' .profile-chip').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+}
+
+function profileChipToggle(el) {
+  el.classList.toggle('selected');
+}
+
+function getSelectedChip(groupId) {
+  const el = document.querySelector('#' + groupId + ' .profile-chip.selected');
+  return el ? el.dataset.val : null;
+}
+
+function getSelectedChips(groupId) {
+  return Array.from(document.querySelectorAll('#' + groupId + ' .profile-chip.selected')).map(c => c.dataset.val);
+}
+
+function updateProfilePreview() {
+  const name = document.getElementById('profile-name').value.trim();
+  const age = document.getElementById('profile-age').value;
+  const occupation = document.getElementById('profile-occupation').value;
+
+  document.getElementById('profile-display-name').textContent = name || 'Completa il tuo profilo';
+  document.getElementById('profile-avatar').textContent = name ? name.charAt(0).toUpperCase() : '?';
+
+  const tags = [];
+  if (age) tags.push(age + ' anni');
+  if (occupation) tags.push(occupation);
+  const chronotype = getSelectedChip('profile-chronotype');
+  if (chronotype) tags.push(chronotype);
+
+  const tagsEl = document.getElementById('profile-display-tags');
+  tagsEl.innerHTML = tags.map(t => `<span class="profile-tag">${t}</span>`).join('');
+
+  if (name) {
+    document.getElementById('profile-display-subtitle').textContent = 'Profilo personalizzato attivo';
+  } else {
+    document.getElementById('profile-display-subtitle').textContent = 'Per analisi AI personalizzate';
+  }
+}
+
+function updateSleepProfile() {
+  const wake = parseInt(document.getElementById('profile-wake').value);
+  const bed = parseInt(document.getElementById('profile-bed').value);
+  const displayBed = bed >= 24 ? bed - 24 : bed;
+
+  document.getElementById('profile-wake-val').textContent = wake + ':00';
+  document.getElementById('profile-bed-val').textContent = String(displayBed).padStart(2,'0') + ':00';
+
+  const sleepH = wake <= displayBed ? (24 - displayBed + wake) : (wake - displayBed);
+  const feedbackEl = document.getElementById('profile-sleep-feedback');
+
+  if (sleepH < 5) {
+    feedbackEl.innerHTML = '<div class="profile-feedback negative">Dormi meno di 5 ore. La privazione cronica di sonno aumenta il rischio di malattie cardiovascolari del 48% e riduce le funzioni cognitive come dopo 2 giorni svegli.</div>';
+  } else if (sleepH < 6) {
+    feedbackEl.innerHTML = '<div class="profile-feedback negative">Sonno insufficiente ('+sleepH+'h). Sotto le 6 ore il corpo non completa i cicli REM necessari per consolidare la memoria e regolare le emozioni.</div>';
+  } else if (sleepH < 7) {
+    feedbackEl.innerHTML = '<div class="profile-feedback negative">Appena sotto la soglia raccomandata. 7-9 ore sono necessarie per la rigenerazione cellulare e il sistema immunitario.</div>';
+  } else if (sleepH <= 9) {
+    feedbackEl.innerHTML = '<div class="profile-feedback positive">Ottimo! '+sleepH+' ore di sonno sono nella fascia ideale (7-9h). Il cervello puo completare tutti i cicli di sonno necessari.</div>';
+  } else {
+    feedbackEl.innerHTML = '<div class="profile-feedback negative">Dormi molto ('+sleepH+'h). Dormire oltre 9 ore regolarmente e associato a maggiore infiammazione e rischio di depressione.</div>';
+  }
+}
+
+function updateProfileFeedback() {
+  // Activity feedback
+  const activity = getSelectedChip('profile-activity');
+  const actFb = document.getElementById('profile-activity-feedback');
+  if (activity === 'sedentario') {
+    actFb.innerHTML = '<div class="profile-feedback negative">La sedentarieta aumenta il rischio di depressione del 25% e riduce l\'aspettativa di vita. Anche 15 min/giorno di camminata fanno la differenza.</div>';
+  } else if (activity === 'molto-attivo' || activity === 'attivo') {
+    actFb.innerHTML = '<div class="profile-feedback positive">L\'attivita fisica regolare aumenta BDNF (fattore neurotrofico), migliorando memoria, concentrazione e umore.</div>';
+  } else {
+    actFb.innerHTML = '';
+  }
+
+  // Stress feedback
+  const stress = getSelectedChip('profile-stress');
+  const stressFb = document.getElementById('profile-stress-feedback');
+  if (stress === 'alto' || stress === 'molto-alto') {
+    stressFb.innerHTML = '<div class="profile-feedback negative">Stress cronico elevato: il cortisolo alto riduce la corteccia prefrontale (decisioni) e amplifica l\'amigdala (ansia). L\'uso del telefono come "fuga" peggiora il ciclo.</div>';
+  } else if (stress === 'molto-basso' || stress === 'basso') {
+    stressFb.innerHTML = '<div class="profile-feedback positive">Basso stress percepito. Questo favorisce la neuroplasticita e la capacita di autoregolazione digitale.</div>';
+  } else {
+    stressFb.innerHTML = '';
+  }
+
+  // Digital habits feedback
+  const digital = getSelectedChips('profile-digital');
+  const digFb = document.getElementById('profile-digital-feedback');
+  const warnings = [];
+  if (digital.includes('scrolling')) warnings.push('Lo scrolling infinito attiva loop dopaminergici che riducono la soglia di attenzione del 20% in 2 settimane.');
+  if (digital.includes('gaming') && digital.includes('scrolling')) warnings.push('Gaming + social: doppia stimolazione dopaminergica. Il cervello si abitua e serve sempre piu stimolo per provare soddisfazione.');
+  if (digital.includes('apprendimento')) warnings.push('<span style="color:var(--green)">L\'apprendimento digitale e positivo se alternato a pause e pratica offline.</span>');
+
+  if (warnings.length > 0) {
+    digFb.innerHTML = warnings.map(w => `<div class="profile-feedback ${w.includes('color:var(--green)') ? 'positive' : 'negative'}">${w}</div>`).join('');
+  } else {
+    digFb.innerHTML = '';
+  }
+}
+
+function saveProfile() {
+  const profile = {
+    name: document.getElementById('profile-name').value.trim(),
+    age: document.getElementById('profile-age').value,
+    occupation: document.getElementById('profile-occupation').value,
+    schedule: document.getElementById('profile-schedule').value,
+    wakeTime: parseInt(document.getElementById('profile-wake').value),
+    bedTime: parseInt(document.getElementById('profile-bed').value),
+    chronotype: getSelectedChip('profile-chronotype'),
+    social: getSelectedChip('profile-social'),
+    activity: getSelectedChip('profile-activity'),
+    stress: getSelectedChip('profile-stress'),
+    personality: getSelectedChip('profile-personality'),
+    digitalHabits: getSelectedChips('profile-digital'),
+    goals: getSelectedChips('profile-goals'),
+    hobbies: getSelectedChips('profile-hobbies'),
+    savedAt: new Date().toISOString()
+  };
+
+  state.profile = profile;
+  Storage.save();
+
+  // Show feedback summary
+  showProfileFeedbackSummary(profile);
+
+  // Visual save confirmation
+  const btn = document.querySelector('#tab-profile .btn-primary');
+  const origText = btn.textContent;
+  btn.textContent = 'Salvato!';
+  btn.style.background = 'var(--green)';
+  setTimeout(() => { btn.textContent = origText; btn.style.background = ''; }, 2000);
+}
+
+function showProfileFeedbackSummary(profile) {
+  const el = document.getElementById('profile-feedback-summary');
+  const content = document.getElementById('profile-feedback-content');
+  const items = [];
+
+  // Sleep analysis
+  const bed = profile.bedTime >= 24 ? profile.bedTime - 24 : profile.bedTime;
+  const sleepH = profile.wakeTime <= bed ? (24 - bed + profile.wakeTime) : (profile.wakeTime - bed);
+  if (sleepH >= 7 && sleepH <= 9) {
+    items.push({positive: true, text: `Sonno ideale (${sleepH}h). Ottima base per energia e concentrazione.`});
+  } else if (sleepH < 7) {
+    items.push({positive: false, text: `Sonno insufficiente (${sleepH}h). L'obiettivo e 7-9h per prestazioni cognitive ottimali.`});
+  }
+
+  // Late bedtime
+  if (bed >= 0 && bed < 5) {
+    items.push({positive: false, text: `Vai a dormire dopo mezzanotte. La melatonina si produce dalle 21-22: dormire tardi riduce la qualita del sonno del 30%.`});
+  }
+
+  // Activity
+  if (profile.activity === 'sedentario') {
+    items.push({positive: false, text: `Stile sedentario: 150 min/settimana di attivita moderata riducono il rischio di depressione del 25%.`});
+  } else if (profile.activity === 'attivo' || profile.activity === 'molto-attivo') {
+    items.push({positive: true, text: `Attivita fisica regolare: +23% di funzioni esecutive e migliore regolazione emotiva.`});
+  }
+
+  // Stress
+  if (profile.stress === 'alto' || profile.stress === 'molto-alto') {
+    items.push({positive: false, text: `Stress elevato: il cortisolo cronico riduce l'ippocampo (memoria) e amplifica la ricerca compulsiva di distrazioni digitali.`});
+  }
+
+  // Digital habits
+  if (profile.digitalHabits.includes('scrolling') && profile.digitalHabits.length > 3) {
+    items.push({positive: false, text: `Molte attivita digitali ad alto stimolo. Il multitasking digitale riduce la materia grigia nella corteccia cingolata anteriore.`});
+  }
+
+  // Goals
+  if (profile.goals.length > 0) {
+    items.push({positive: true, text: `Obiettivi impostati: ${profile.goals.join(', ')}. L'AI personalizzera i consigli su questi.`});
+  }
+
+  // Hobbies
+  if (profile.hobbies.length > 0) {
+    items.push({positive: true, text: `Hobby offline: ${profile.hobbies.join(', ')}. Verranno suggeriti come alternative allo schermo.`});
+  }
+
+  if (items.length > 0) {
+    el.style.display = 'block';
+    content.innerHTML = items.map(i => `<div class="profile-feedback ${i.positive ? 'positive' : 'negative'}">${i.text}</div>`).join('');
+  }
+}
+
+function loadProfile() {
+  const p = state.profile;
+  if (!p) return;
+
+  // Text fields
+  if (p.name) document.getElementById('profile-name').value = p.name;
+  if (p.age) document.getElementById('profile-age').value = p.age;
+  if (p.occupation) document.getElementById('profile-occupation').value = p.occupation;
+  if (p.schedule) document.getElementById('profile-schedule').value = p.schedule;
+
+  // Sliders
+  if (p.wakeTime != null) document.getElementById('profile-wake').value = p.wakeTime;
+  if (p.bedTime != null) document.getElementById('profile-bed').value = p.bedTime;
+
+  // Single-select chips
+  const chipGroups = {
+    'profile-chronotype': p.chronotype,
+    'profile-social': p.social,
+    'profile-activity': p.activity,
+    'profile-stress': p.stress,
+    'profile-personality': p.personality
+  };
+  for (const [groupId, val] of Object.entries(chipGroups)) {
+    if (val) {
+      document.querySelectorAll('#' + groupId + ' .profile-chip').forEach(c => c.classList.remove('selected'));
+      const chip = document.querySelector(`#${groupId} .profile-chip[data-val="${val}"]`);
+      if (chip) chip.classList.add('selected');
+    }
+  }
+
+  // Multi-select chips
+  const multiGroups = {
+    'profile-digital': p.digitalHabits || [],
+    'profile-goals': p.goals || [],
+    'profile-hobbies': p.hobbies || []
+  };
+  for (const [groupId, vals] of Object.entries(multiGroups)) {
+    document.querySelectorAll('#' + groupId + ' .profile-chip').forEach(c => {
+      c.classList.toggle('selected', vals.includes(c.dataset.val));
+    });
+  }
+
+  // Update displays
+  updateSleepProfile();
+  updateProfilePreview();
+  updateProfileFeedback();
+  showProfileFeedbackSummary(p);
+}
+
+function getProfileContext() {
+  const p = state.profile;
+  if (!p) return '';
+
+  const bed = p.bedTime >= 24 ? p.bedTime - 24 : p.bedTime;
+  const sleepH = p.wakeTime <= bed ? (24 - bed + p.wakeTime) : (p.wakeTime - bed);
+
+  let ctx = `\nPROFILO UTENTE:`;
+  if (p.name) ctx += ` Nome: ${p.name}.`;
+  ctx += ` Eta: ${p.age}.`;
+  ctx += ` Occupazione: ${p.occupation} (${p.schedule}).`;
+  ctx += ` Sonno tipico: ${sleepH}h (sveglia ${p.wakeTime}:00, letto ${String(bed).padStart(2,'0')}:00), cronotipo ${p.chronotype}.`;
+  ctx += ` Vive: ${p.social}. Attivita fisica: ${p.activity}. Stress: ${p.stress}. Personalita: ${p.personality}.`;
+  if (p.digitalHabits.length > 0) ctx += ` Abitudini digitali: ${p.digitalHabits.join(', ')}.`;
+  if (p.goals.length > 0) ctx += ` Obiettivi: ${p.goals.join(', ')}.`;
+  if (p.hobbies.length > 0) ctx += ` Hobby offline: ${p.hobbies.join(', ')}.`;
+  ctx += `\nUSA QUESTE INFO per personalizzare i consigli: suggerisci hobby specifici dell'utente come alternative, adatta il linguaggio all'eta, considera lo stress e l'occupazione nei consigli, e focalizza sugli obiettivi dichiarati.`;
+
+  return ctx;
+}
+
 // ============ UI NAVIGATION ============
 function switchTab(tab) {
   state.currentTab = tab;
@@ -1996,6 +2555,7 @@ function updateAIStatus() {
 function init() {
   Storage.load();
   const savedKey = Storage.loadKey();
+  loadProfile();
 
   document.getElementById('goal-slider').value = state.goal;
   document.getElementById('goal-display').textContent = formatMin(state.goal);
