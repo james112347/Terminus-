@@ -537,11 +537,6 @@ input[type="range"]::-webkit-slider-thumb {
           <div id="res-warnings"></div>
         </div>
 
-        <!-- Ralph Loop -->
-        <div class="result-section">
-          <h3>🔄 Ralph Loop</h3>
-          <div id="res-ralph"></div>
-        </div>
       </div>
 
       <button class="btn btn-primary" onclick="switchTab('dashboard')">Vai alla Dashboard</button>
@@ -796,42 +791,43 @@ Estrai TUTTI i dati visibili e rispondi SOLO con JSON valido (senza markdown):
     const catStr = usageData.categories.map(c => `- ${c.name}: ${c.minutes} min (${c.type})`).join('\n');
     const appStr = (usageData.apps || []).slice(0, 10).map(a => `- ${a.name}: ${a.minutes} min`).join('\n');
 
-    const systemPrompt = `Sei un neuroscienziato e psicologo italiano specializzato in dipendenza digitale e benessere mentale. Il tuo compito e' analizzare i dati di utilizzo smartphone e dare consigli CONCRETI, SPECIFICI e UTILI in italiano.
+    const systemPrompt = `Sei un neuroscienziato e psicologo italiano di fama mondiale, specializzato in dipendenza digitale, neuroplasticita' e benessere mentale. Hai 20 anni di esperienza clinica. Analizza i dati di utilizzo smartphone e fornisci un'analisi APPROFONDITA, MIRATA e SCIENTIFICA in italiano.
 
-REGOLE IMPORTANTI:
-- Sii DIRETTO e ONESTO: se l'uso e' eccessivo, dillo chiaramente con dati scientifici
-- Dai consigli SPECIFICI con attivita' alternative concrete (es: "fai 20 minuti di camminata", "leggi 15 pagine di un libro", "chiama un amico per 10 minuti")
-- Cita EFFETTI REALI sul cervello (es: "30+ min di social media riducono la materia grigia nella corteccia prefrontale")
-- Se l'uso e' negativo, spiega ESATTAMENTE cosa sta succedendo al cervello e al corpo
-- Suggerisci SOSTITUTI specifici per ogni categoria problematica:
-  * Social Media -> uscire con amici dal vivo, scrivere un diario, fare sport
-  * Gaming -> giochi da tavolo, sport, imparare uno strumento musicale
-  * Intrattenimento -> leggere, podcast educativi, documentari brevi, cucinare
-  * Uso notturno -> meditazione, lettura con luce calda, stretching, preparare il giorno dopo
-- Ogni warning DEVE contenere un consiglio pratico e immediato
-- Il campo "advice" deve essere un paragrafo ricco (3-4 frasi) con insight scientifico + azione concreta
+REGOLE FONDAMENTALI:
+1. Sii DIRETTO e BRUTALMENTE ONESTO: se l'uso e' eccessivo, dillo senza mezzi termini
+2. Ogni affermazione deve essere supportata da dati scientifici reali
+3. I consigli devono essere IPER-SPECIFICI: non "fai esercizio" ma "fai 20 minuti di camminata veloce nel quartiere alle 18:00 invece di scrollare Instagram"
+4. Personalizza tutto in base alle categorie e app SPECIFICHE che l'utente usa
 
-ANALISI SCIENTIFICA da includere:
-- Effetto sulla dopamina (social media = rilascio intermittente, crea dipendenza)
-- Effetto sulla melatonina (luce blu serale = ritardo del sonno di 30-60 min)
-- Effetto sull'attenzione (ogni notifica = 23 minuti per ritrovare concentrazione)
-- Effetto sull'umore (confronto sociale su Instagram/TikTok = aumento ansia del 25%)
-- Effetto sulla memoria (multitasking digitale = riduzione memoria di lavoro)
+CONSEGUENZE A LUNGO TERMINE (OBBLIGATORIO - includi SEMPRE):
+Se l'uso e' eccessivo, DEVI spiegare cosa succedera' nei prossimi anni se continua cosi':
 
-Rispondi SOLO con JSON valido (senza markdown, solo JSON puro):
+- CERVELLO (1-5 anni): riduzione materia grigia nella corteccia prefrontale (studio Uni. di Zurigo 2020), diminuzione capacita' di concentrazione profonda da 12 sec a 8 sec, atrofia delle aree cerebrali legate all'empatia, rischio di deficit cognitivo precoce
+- SALUTE MENTALE (1-3 anni): aumento del 70% del rischio di depressione con 3+ ore di social media/giorno (studio JAMA Psychiatry), sviluppo di ansia sociale cronica, sindrome da confronto sociale permanente, isolamento progressivo
+- SONNO (6 mesi-2 anni): sviluppo di insonnia cronica, alterazione permanente del ritmo circadiano, riduzione del sonno REM del 20-30%, invecchiamento cellulare accelerato
+- RELAZIONI (1-3 anni): riduzione del 40% della qualita' delle relazioni interpersonali, perdita progressiva delle capacita' di conversazione faccia a faccia, phubbing cronico
+- POSTURA E VISTA (1-5 anni): sindrome del collo da smartphone (text neck), miopia progressiva, affaticamento oculare cronico, mal di testa tensivi
+- PRODUTTIVITA' (immediato-2 anni): perdita di 2-3 ore produttive al giorno per frammentazione dell'attenzione, incapacita' di lavoro profondo (deep work), multitasking cronico che riduce il QI effettivo di 10-15 punti
+
+SOSTITUTI SPECIFICI per ogni categoria:
+- Social Media: chiama un amico per 15 min, scrivi 1 pagina di diario, fai una passeggiata di 20 min, impara 10 parole di una nuova lingua
+- Gaming: giochi da tavolo con amici/famiglia, impara uno strumento musicale (anche 10 min), fai sport o vai in palestra, cucina un piatto nuovo
+- Video/Streaming: leggi 20 pagine di un libro, ascolta un podcast educativo, guarda un documentario breve (max 30 min), disegna o fai arte
+- Uso notturno (dopo le 22): meditazione guidata 10 min, stretching/yoga, leggi con luce calda, prepara la lista di cose da fare per domani, ascolta musica rilassante
+- Messaggistica eccessiva: organizza un incontro dal vivo, fai una videochiamata breve invece di 50 messaggi, metti il telefono in modalita' aereo per 1 ora
+
+PIANO D'AZIONE CONCRETO (includi nel campo advice):
+- Suggerisci orari precisi per ridurre l'uso (es: "dalle 8 alle 10 studia senza telefono, alle 12 controlla messaggi per 15 min")
+- Proponi la regola 20-20-20 per gli occhi (ogni 20 min, guarda a 20 piedi di distanza per 20 sec)
+- Suggerisci app di blocco se l'uso supera il 150% dell'obiettivo
+
+Rispondi SOLO con JSON valido (senza markdown, senza backtick, solo JSON puro):
 {
   "moodImpactScore": <1-100, 100=impatto peggiore su umore>,
   "brainHealthScore": <1-100, 100=impatto peggiore su cervello>,
   "productivityScore": <1-100, 100=produttivita migliore>,
-  "advice": "<paragrafo dettagliato 3-4 frasi con insight scientifico E azione concreta da fare ORA>",
-  "warnings": [{"severity": "<info|caution|warning|critical>", "title": "<titolo specifico>", "message": "<spiegazione scientifica dell'effetto negativo>", "recommendation": "<azione CONCRETA e IMMEDIATA da fare, con alternativa specifica>"}],
-  "ralphLoop": {
-    "review": "<riassunto preciso dei dati con confronto all'obiettivo>",
-    "analyze": "<analisi scientifica degli effetti sul cervello basata sulle categorie usate>",
-    "learn": "<cosa insegnano questi dati, con riferimento a studi neuroscientifici>",
-    "plan": "<piano d'azione dettagliato per domani con orari e attivita specifiche>",
-    "habituate": "<una nuova abitudine specifica da iniziare oggi, con passi concreti>"
-  }
+  "advice": "<PARAGRAFO LUNGO E DETTAGLIATO (minimo 5-6 frasi): inizia con la situazione attuale, poi spiega gli effetti scientifici specifici sul cervello basati sulle categorie usate, poi descrivi le CONSEGUENZE A LUNGO TERMINE (cosa succedera' tra 1-5 anni se continua cosi'), infine dai 3-4 azioni CONCRETE E SPECIFICHE con orari e alternative precise. Deve essere un vero consulto medico personalizzato, non consigli generici.>",
+  "warnings": [{"severity": "<info|caution|warning|critical>", "title": "<titolo specifico alla categoria/app problematica>", "message": "<spiegazione scientifica dettagliata dell'effetto negativo ATTUALE + cosa succedera' A LUNGO TERMINE (1-5 anni) se non cambia>", "recommendation": "<3 azioni CONCRETE: 1) cosa fare ORA 2) cosa fare DOMANI 3) abitudine settimanale da adottare, con alternative specifiche per ogni attivita' problematica>"}]
 }`;
 
     const userMessage = `Dati smartphone oggi:
@@ -930,7 +926,7 @@ async function startAnalysis() {
     updateLoadingPhase('Analisi pattern di utilizzo...');
     await new Promise(r => setTimeout(r, 500));
 
-    updateLoadingPhase('Ralph Loop: Review + Analyze...');
+    updateLoadingPhase('Analisi benessere e conseguenze...');
     const wellness = await API.analyzeWellness(usageData);
 
     // Step 3: Build report
@@ -1028,7 +1024,6 @@ function buildReport(usageData, wellness) {
     overallScore: overall,
     advice: wellness.advice || '',
     warnings: wellness.warnings || [],
-    ralphLoop: wellness.ralphLoop || {},
     goal: state.goal
   };
 }
@@ -1061,15 +1056,6 @@ function displayResults(report) {
     warnSection.style.display = 'none';
   }
 
-  // Ralph Loop
-  const ralph = report.ralphLoop;
-  document.getElementById('res-ralph').innerHTML = `
-    <div class="ralph-step"><div class="ralph-phase">👁 Review</div><div class="ralph-text">${ralph.review || ''}</div></div>
-    <div class="ralph-step"><div class="ralph-phase">🔍 Analyze</div><div class="ralph-text">${ralph.analyze || ''}</div></div>
-    <div class="ralph-step"><div class="ralph-phase">💡 Learn</div><div class="ralph-text">${ralph.learn || ''}</div></div>
-    <div class="ralph-step"><div class="ralph-phase">📋 Plan</div><div class="ralph-text">${ralph.plan || ''}</div></div>
-    <div class="ralph-step"><div class="ralph-phase">🔄 Habituate</div><div class="ralph-text">${ralph.habituate || ''}</div></div>
-  `;
 }
 
 function updateDashboard(report) {
@@ -1284,13 +1270,6 @@ function showReportDetail(id) {
     html += `<div style="margin-bottom:16px"><h3 style="font-size:14px; margin-bottom:8px">💡 Consiglio AI</h3><p style="font-size:13px; color:var(--text2); line-height:1.6">${report.advice}</p></div>`;
   }
 
-  if (report.ralphLoop) {
-    html += `<div><h3 style="font-size:14px; margin-bottom:8px">🔄 Ralph Loop</h3>`;
-    for (const [phase, text] of Object.entries(report.ralphLoop)) {
-      if (text) html += `<div class="ralph-step"><div class="ralph-phase">${phase}</div><div class="ralph-text">${text}</div></div>`;
-    }
-    html += `</div>`;
-  }
 
   document.getElementById('detail-content').innerHTML = html;
   document.getElementById('detail-modal').classList.add('show');
