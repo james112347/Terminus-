@@ -554,6 +554,21 @@ input[type="range"]::-webkit-slider-thumb {
   <!-- ===== SETTINGS TAB ===== -->
   <div id="tab-settings" class="tab-content">
     <div class="fade-up">
+      <!-- API Key -->
+      <div class="card" id="apikey-card" style="border-color: rgba(99,102,241,0.4)">
+        <div class="card-title" style="color:var(--indigo)">Chiave API Groq</div>
+        <p style="font-size:12px; color:var(--text2); margin-bottom:10px">
+          Necessaria per l'analisi AI. La chiave viene salvata solo nel tuo browser.
+        </p>
+        <input id="apikey-input" type="password" placeholder="gsk_..."
+          style="width:100%; padding:12px; background:var(--bg3); border:1px solid var(--card-border); border-radius:10px; color:var(--text); font-size:14px; font-family:monospace">
+        <div style="display:flex; gap:8px; margin-top:10px">
+          <button class="btn btn-primary" onclick="saveApiKey()" style="flex:1; padding:12px; font-size:14px">Salva</button>
+          <button class="btn btn-secondary" onclick="toggleKeyVisibility()" style="width:50px; padding:12px; font-size:14px">👁</button>
+        </div>
+        <div id="apikey-status" style="font-size:12px; margin-top:8px; display:none"></div>
+      </div>
+
       <!-- Goal Setting -->
       <div class="card">
         <div class="card-title">Obiettivo Giornaliero</div>
@@ -598,7 +613,7 @@ input[type="range"]::-webkit-slider-thumb {
         </div>
         <div class="setting-row">
           <span class="setting-label">Stato AI</span>
-          <span style="color:var(--green); font-weight:600">Attiva</span>
+          <span id="ai-status" style="font-weight:600">--</span>
         </div>
       </div>
 
@@ -632,6 +647,24 @@ input[type="range"]::-webkit-slider-thumb {
   </button>
 </nav>
 
+<!-- API Key Setup Overlay -->
+<div class="modal-overlay" id="setup-modal" style="align-items:center; justify-content:center; padding:20px">
+  <div style="background:var(--bg2); border-radius:20px; padding:30px; max-width:400px; width:100%; text-align:center">
+    <div style="font-size:48px; margin-bottom:16px">🔑</div>
+    <h2 style="font-size:22px; margin-bottom:8px">Benvenuto in Terminus</h2>
+    <p style="font-size:13px; color:var(--text2); margin-bottom:20px; line-height:1.5">
+      Per iniziare, inserisci la tua chiave API Groq.<br>
+      Puoi ottenerla gratis su <strong>console.groq.com</strong>
+    </p>
+    <input id="setup-key-input" type="text" placeholder="gsk_..."
+      style="width:100%; padding:14px; background:var(--bg3); border:1px solid var(--card-border); border-radius:12px; color:var(--text); font-size:15px; font-family:monospace; text-align:center; margin-bottom:12px">
+    <button class="btn btn-primary" onclick="saveSetupKey()" style="margin-bottom:8px">
+      Inizia
+    </button>
+    <div id="setup-error" style="font-size:12px; color:var(--red); display:none; margin-top:8px"></div>
+  </div>
+</div>
+
 <!-- Method Modal -->
 <div class="modal-overlay" id="method-modal">
   <div class="modal">
@@ -654,7 +687,7 @@ input[type="range"]::-webkit-slider-thumb {
 // ============ CONFIGURATION ============
 const CONFIG = {
   GROQ_API: 'https://api.groq.com/openai/v1/chat/completions',
-  API_KEY: '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',
+  API_KEY: '', // User enters this in Settings
   VISION_MODEL: 'llama-3.2-90b-vision-preview',
   TEXT_MODEL: 'llama-3.3-70b-versatile',
   MAX_IMG_WIDTH: 1024
@@ -685,6 +718,15 @@ const Storage = {
         state.goal = data.goal || 120;
       }
     } catch(e) {}
+  },
+  saveKey(key) {
+    localStorage.setItem('terminus_apikey', key);
+    CONFIG.API_KEY = key;
+  },
+  loadKey() {
+    const key = localStorage.getItem('terminus_apikey') || '';
+    CONFIG.API_KEY = key;
+    return key;
   }
 };
 
@@ -859,6 +901,10 @@ function clearPreview() {
 // ============ ANALYSIS ============
 async function startAnalysis() {
   if (!state.imageBase64 || state.isAnalyzing) return;
+  if (!CONFIG.API_KEY) {
+    showError('Inserisci la chiave API Groq nelle Impostazioni prima di analizzare.');
+    return;
+  }
   state.isAnalyzing = true;
 
   showSection('analyze-loading');
@@ -907,6 +953,10 @@ async function startAnalysis() {
 }
 
 async function startManualAnalysis() {
+  if (!CONFIG.API_KEY) {
+    showError('Inserisci la chiave API Groq nelle Impostazioni prima di analizzare.');
+    return;
+  }
   const total = parseInt(document.getElementById('manual-total').value) || 0;
   if (total === 0) { showError('Inserisci almeno il tempo totale.'); return; }
 
@@ -1254,11 +1304,70 @@ function clearAllData() {
   updateHistory();
 }
 
+// ============ API KEY MANAGEMENT ============
+function saveApiKey() {
+  const key = document.getElementById('apikey-input').value.trim();
+  if (!key || !key.startsWith('gsk_')) {
+    showApiKeyStatus('La chiave deve iniziare con "gsk_"', false);
+    return;
+  }
+  Storage.saveKey(key);
+  showApiKeyStatus('Chiave salvata!', true);
+  updateAIStatus();
+}
+
+function saveSetupKey() {
+  const key = document.getElementById('setup-key-input').value.trim();
+  if (!key || !key.startsWith('gsk_')) {
+    document.getElementById('setup-error').textContent = 'Inserisci una chiave valida (inizia con "gsk_")';
+    document.getElementById('setup-error').style.display = 'block';
+    return;
+  }
+  Storage.saveKey(key);
+  document.getElementById('setup-modal').classList.remove('show');
+  document.getElementById('apikey-input').value = key.substring(0, 8) + '...' + key.substring(key.length - 4);
+  updateAIStatus();
+}
+
+function toggleKeyVisibility() {
+  const input = document.getElementById('apikey-input');
+  input.type = input.type === 'password' ? 'text' : 'password';
+}
+
+function showApiKeyStatus(msg, success) {
+  const el = document.getElementById('apikey-status');
+  el.textContent = msg;
+  el.style.color = success ? 'var(--green)' : 'var(--red)';
+  el.style.display = 'block';
+  setTimeout(() => el.style.display = 'none', 3000);
+}
+
+function updateAIStatus() {
+  const el = document.getElementById('ai-status');
+  if (CONFIG.API_KEY) {
+    el.textContent = 'Attiva';
+    el.style.color = 'var(--green)';
+  } else {
+    el.textContent = 'Chiave mancante';
+    el.style.color = 'var(--red)';
+  }
+}
+
 // ============ INITIALIZATION ============
 function init() {
   Storage.load();
+  const savedKey = Storage.loadKey();
+
   document.getElementById('goal-slider').value = state.goal;
   document.getElementById('goal-display').textContent = formatMin(state.goal);
+
+  // Show API key setup if no key saved
+  if (!savedKey) {
+    document.getElementById('setup-modal').classList.add('show');
+  } else {
+    document.getElementById('apikey-input').value = savedKey.substring(0, 8) + '...' + savedKey.substring(savedKey.length - 4);
+  }
+  updateAIStatus();
 
   // Restore latest report to dashboard
   if (state.history.length > 0) {
@@ -1273,6 +1382,10 @@ function init() {
   });
   document.getElementById('detail-modal').addEventListener('click', function(e) {
     if (e.target === this) closeDetailModal();
+  });
+  document.getElementById('setup-modal').addEventListener('click', function(e) {
+    // Don't close setup modal on background click if no key
+    if (e.target === this && CONFIG.API_KEY) this.classList.remove('show');
   });
 }
 
