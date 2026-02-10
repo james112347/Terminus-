@@ -10,27 +10,38 @@ on:
 jobs:
   build:
     name: Build iOS App
-    runs-on: macos-14
+    runs-on: macos-15
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Select Xcode 16
-        run: sudo xcode-select -s /Applications/Xcode_16.0.app/Contents/Developer
+      - name: List available Xcode versions
+        run: ls /Applications/ | grep Xcode
+
+      - name: Select Xcode
+        run: |
+          # Use latest Xcode available on macos-15
+          XCODE_PATH=$(ls -d /Applications/Xcode*.app 2>/dev/null | sort -V | tail -1)
+          echo "Using: $XCODE_PATH"
+          sudo xcode-select -s "$XCODE_PATH/Contents/Developer"
 
       - name: Show Xcode version
         run: xcodebuild -version
+
+      - name: List available simulators
+        run: xcrun simctl list devices available | head -30
 
       - name: Build for iOS Simulator (verification)
         run: |
           xcodebuild build \
             -project Terminus.xcodeproj \
             -scheme Terminus \
-            -destination 'platform=iOS Simulator,name=iPhone 16 Pro,OS=18.0' \
+            -destination 'platform=iOS Simulator,name=iPhone 16 Pro' \
             -configuration Debug \
             CODE_SIGNING_ALLOWED=NO \
-            | tail -20
+            COMPILER_INDEX_STORE_ENABLE=NO \
+            2>&1 | tail -30
 
       - name: Archive for device (unsigned IPA)
         run: |
@@ -44,7 +55,8 @@ jobs:
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
             AD_HOC_CODE_SIGNING_ALLOWED=YES \
-            | tail -20
+            COMPILER_INDEX_STORE_ENABLE=NO \
+            2>&1 | tail -30
 
       - name: Create IPA from archive
         run: |
@@ -52,11 +64,12 @@ jobs:
           cp -r build/Terminus.xcarchive/Products/Applications/Terminus.app build/Payload/
           cd build
           zip -r Terminus.ipa Payload/
-          ls -la Terminus.ipa
+          echo "IPA size:"
+          ls -lh Terminus.ipa
 
       - name: Upload IPA artifact
         uses: actions/upload-artifact@v4
         with:
           name: Terminus-iOS
           path: build/Terminus.ipa
-          retention-days: 30
+          retention-days: 90
