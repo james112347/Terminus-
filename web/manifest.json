@@ -4,8 +4,8 @@
   "description": "Monitor benessere digitale con AI",
   "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#050510",
-  "theme_color": "#050510",
+  "background_color": "#f4f4fa",
+  "theme_color": "#f4f4fa",
   "orientation": "portrait",
   "icons": [
     {
