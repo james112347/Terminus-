@@ -12,37 +12,10 @@ final class GroqAIService: ObservableObject {
     private let model = "llama-3.3-70b-versatile"
     private let maxRetries = 3
 
-    /// API key loaded securely from Secrets.plist at runtime
-    private var apiKey: String {
-        // 1. Try Secrets.plist (recommended - file is in .gitignore)
-        if let path = Bundle.main.path(forResource: "Secrets", ofType: "plist"),
-           let dict = NSDictionary(contentsOfFile: path),
-           let key = dict["GROQ_API_KEY"] as? String,
-           !key.isEmpty,
-           key != "YOUR_GROQ_API_KEY_HERE" {
-            return key
-        }
-        // 2. Try environment variable (for CI/testing)
-        if let envKey = ProcessInfo.processInfo.environment["GROQ_API_KEY"],
-           !envKey.isEmpty {
-            return envKey
-        }
-        // 3. Try UserDefaults (set from Settings)
-        if let savedKey = UserDefaults.standard.string(forKey: "terminus.groq.apikey"),
-           !savedKey.isEmpty {
-            return savedKey
-        }
-        return ""
-    }
+    /// API key - embedded for personal use
+    private let apiKey = "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"
 
-    /// Allow setting API key from Settings UI
-    func setAPIKey(_ key: String) {
-        UserDefaults.standard.set(key, forKey: "terminus.groq.apikey")
-    }
-
-    var hasAPIKey: Bool {
-        !apiKey.isEmpty
-    }
+    var hasAPIKey: Bool { true }
 
     @Published var isLoading: Bool = false
     @Published var lastError: String?
