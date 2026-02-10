@@ -30,26 +30,17 @@ jobs:
             -scheme Terminus \
             -sdk iphoneos \
             -configuration Release \
-            -derivedDataPath build/DerivedData \
+            CONFIGURATION_BUILD_DIR=$PWD/build/Release-iphoneos \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
-            COMPILER_INDEX_STORE_ENABLE=NO \
-            2>&1 | tail -20
+            COMPILER_INDEX_STORE_ENABLE=NO
 
       - name: Package IPA
         run: |
-          echo "=== Searching for .app ==="
-          find build/DerivedData -name "*.app" -type d
-          APP_PATH=$(find build/DerivedData -name "Terminus.app" -type d | head -1)
-          if [ -z "$APP_PATH" ]; then
-            echo "ERROR: Terminus.app not found"
-            find build -type d -maxdepth 5
-            exit 1
-          fi
-          echo "Found: $APP_PATH"
+          ls -la build/Release-iphoneos/
           mkdir -p build/Payload
-          cp -r "$APP_PATH" build/Payload/
+          cp -r build/Release-iphoneos/Terminus.app build/Payload/
           cd build
           zip -r Terminus.ipa Payload/
           ls -lh Terminus.ipa
