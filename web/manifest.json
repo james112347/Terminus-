@@ -1,17 +1,37 @@
 {
-  "name": "Terminus - Benessere Digitale",
+  "name": "Terminus - Wellness Intelligence",
   "short_name": "Terminus",
-  "description": "Monitor benessere digitale con AI",
+  "description": "Traccia energia, sonno, caffeina e ottimizza la tua produttività con IA",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#f4f4fa",
-  "theme_color": "#f4f4fa",
+  "theme_color": "#6c5ce7",
   "orientation": "portrait",
+  "categories": ["health", "productivity", "lifestyle"],
+  "lang": "it",
   "icons": [
     {
-      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%234f46e5'/><text x='50' y='68' text-anchor='middle' fill='white' font-size='50' font-family='system-ui'>T</text></svg>",
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%236c5ce7'/><text x='50' y='68' text-anchor='middle' fill='white' font-size='50' font-family='system-ui'>T</text></svg>",
       "sizes": "any",
-      "type": "image/svg+xml"
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Dashboard Energia",
+      "short_name": "Energia",
+      "url": "./index.html#dashboard"
+    },
+    {
+      "name": "Registra Attività",
+      "short_name": "Timeline",
+      "url": "./index.html#timeline"
+    },
+    {
+      "name": "Coaching AI",
+      "short_name": "Coach",
+      "url": "./index.html#coaching"
     }
   ]
 }
