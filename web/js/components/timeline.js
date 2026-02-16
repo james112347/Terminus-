@@ -8,6 +8,7 @@ import { logCaffeine, CAFFEINE_SOURCES, getTodayCaffeine } from '../models/caffe
 import { logHydration, HYDRATION_SOURCES, getTodayHydration } from '../models/hydration.js';
 import { logSleep } from '../models/sleep.js';
 import { formatTime, formatRelative } from '../utils/datetime.js';
+import { showToast, escapeHtml } from '../utils/ui.js';
 
 export function render(container, profile) {
   const activities = Storage.getToday('activity_logs');
@@ -96,7 +97,7 @@ export function render(container, profile) {
                 ${item.ml ? `<span class="timeline-detail">${item.ml}ml</span>` : ''}
                 ${item.mood ? `<span class="timeline-detail">Umore: ${['', '😫', '😞', '😐', '😊', '😄'][item.mood]}</span>` : ''}
                 ${item.focus ? `<span class="timeline-detail">Focus: ${item.focus}/5</span>` : ''}
-                ${item.notes ? `<span class="timeline-notes">${item.notes}</span>` : ''}
+                ${item.notes ? `<span class="timeline-notes">${escapeHtml(item.notes)}</span>` : ''}
               </div>
             </div>
           `).join('')}
@@ -327,15 +328,6 @@ function createModal(html) {
   });
   document.body.appendChild(overlay);
   return overlay;
-}
-
-function showToast(message) {
-  const toast = document.createElement('div');
-  toast.className = 'toast';
-  toast.textContent = message;
-  document.body.appendChild(toast);
-  setTimeout(() => toast.classList.add('show'), 10);
-  setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 300); }, 2000);
 }
 
 export default { render };

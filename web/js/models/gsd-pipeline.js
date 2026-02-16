@@ -97,7 +97,7 @@ function calcDataQuality(data) {
   if (data.activities.length > 3) score += 10;
   if (data.sleepLogs.length > 0) score += 20;
   if (data.sleepLogs.length >= 5) score += 10;
-  if (data.caffeineLogs.length >= 0) score += 10; // Even 0 is informative
+  if (data.caffeineLogs.length > 0) score += 10;
   if (data.hydrationLogs.length > 0) score += 15;
   if (data.moodLogs.length > 0) score += 10;
   if (data.focusLogs.length > 0) score += 5;

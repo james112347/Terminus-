@@ -145,7 +145,7 @@ export function calcDataQuality() {
   if (activities.length > 0) score += 15;
   if (activities.length >= 3) score += 5;
   if (sleep.length > 0) score += 15;
-  if (caffeine.length >= 0) score += 5;
+  if (caffeine.length > 0) score += 5;
   if (hydration.length > 0) score += 10;
   if (dailyLog?.screenMinutes != null) score += 5;
 

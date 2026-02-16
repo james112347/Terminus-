@@ -121,6 +121,12 @@ export function calcSleepScore(profile) {
   };
 }
 
+// Bridge function for GSD/Ralph pipelines
+export function calcSleepDebt(profile) {
+  const result = calcSleepScore(profile || {});
+  return { debt: result.debt, avgDuration: result.avgDuration, trend: result.trend };
+}
+
 export function calcSleepEfficiency(log) {
   if (!log?.duration) return null;
   const awakeTime = log.latency ? log.latency/60 : 0;
@@ -128,4 +134,4 @@ export function calcSleepEfficiency(log) {
   return Math.round(clamp(((log.duration-awakeTime-intTime)/log.duration)*100, 0, 100));
 }
 
-export default { logSleep, getSleepLogs, calcSleepScore, calcSleepEfficiency };
+export default { logSleep, getSleepLogs, calcSleepScore, calcSleepDebt, calcSleepEfficiency };

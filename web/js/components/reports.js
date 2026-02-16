@@ -7,6 +7,7 @@ import { generateWeeklyReport, generateSMARTGoals, discoverCorrelations, analyze
 import { calcSleepScore } from '../models/sleep.js';
 import { analyzeWeeklyReport } from '../services/groq.js';
 import { dayName, dayOfWeek, formatDate } from '../utils/datetime.js';
+import { formatAIResponse } from '../utils/ui.js';
 
 export function render(container, profile) {
   const report = generateWeeklyReport();
@@ -345,14 +346,6 @@ function attachReportEvents(container, profile, report) {
       reportBtn.textContent = 'Genera Report AI';
     });
   }
-}
-
-function formatAIResponse(text) {
-  return text
-    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/\n- /g, '\n<br>• ')
-    .replace(/\n\d\. /g, (m) => `<br>${m.trim()} `)
-    .replace(/\n/g, '<br>');
 }
 
 export default { render };

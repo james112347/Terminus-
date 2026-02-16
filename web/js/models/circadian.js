@@ -145,4 +145,19 @@ export function getEnergyPrediction(profile, currentTime = new Date()) {
 function parseTimeToMinutes(timeStr) { const [h, m] = timeStr.split(':').map(Number); return h * 60 + (m || 0); }
 function parseWakeTime(timeStr) { const [h, m] = timeStr.split(':').map(Number); const d = new Date(); d.setHours(h, m || 0, 0, 0); if (d > new Date()) d.setDate(d.getDate() - 1); return d; }
 
-export default { calcCircadianScore, getEnergyPrediction };
+// Get current circadian phase for a given chronotype
+export function getCurrentPhase(chronotype) {
+  const ct = CONFIG.CHRONOTYPES[chronotype] || CONFIG.CHRONOTYPES.ORSO;
+  const hour = new Date().getHours();
+  for (const peak of ct.peakWindows) {
+    if (hour >= peak.start && hour < peak.end) return { name: 'Picco', icon: '⚡', label: 'Picco Energetico', suggestion: 'Ideale per lavoro profondo' };
+  }
+  for (const dip of ct.dipWindows) {
+    if (hour >= dip.start && hour < dip.end) return { name: 'Calo', icon: '📉', label: 'Calo Pomeridiano', suggestion: 'Task leggeri o pausa' };
+  }
+  if (hour < 6 || hour >= 22) return { name: 'Sonno', icon: '🌙', label: 'Sonno', suggestion: 'Dovresti riposare' };
+  if (hour <= 8) return { name: 'Risveglio', icon: '🌅', label: 'Risveglio', suggestion: 'Luce naturale + idratazione' };
+  return { name: 'Attivo', icon: '📊', label: 'Fase Attiva', suggestion: 'Task standard' };
+}
+
+export default { calcCircadianScore, getEnergyPrediction, getCurrentPhase };

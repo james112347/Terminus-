@@ -7,6 +7,7 @@ import { calcHydrationProgress } from '../models/hydration.js';
 import { getRecommendedActivities, getOptimalAction } from '../models/guidance.js';
 import { calcDataQuality, logCheckin } from '../models/checkin.js';
 import { Storage } from '../utils/storage.js';
+import { showToast } from '../utils/ui.js';
 
 export function render(container, profile) {
   const energy = calcEnergyScore(profile);
@@ -328,15 +329,6 @@ function attachDashboardEvents(container, profile) {
       }
     });
   });
-}
-
-function showToast(message) {
-  const toast = document.createElement('div');
-  toast.className = 'toast';
-  toast.textContent = message;
-  document.body.appendChild(toast);
-  setTimeout(() => toast.classList.add('show'), 10);
-  setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 300); }, 2000);
 }
 
 export default { render };

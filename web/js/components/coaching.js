@@ -9,6 +9,7 @@ import { getLatestCheckin } from '../models/checkin.js';
 import { Storage } from '../utils/storage.js';
 import { formatRelative } from '../utils/datetime.js';
 import { setupWinddown } from '../services/notifications.js';
+import { showToast, formatAIResponse, escapeHtml } from '../utils/ui.js';
 
 export function render(container, profile) {
   const energy = calcEnergyScore(profile);
@@ -230,7 +231,7 @@ function attachCoachingEvents(container, profile, energy) {
 
       chatInput.value = '';
       const chatContainer = container.querySelector('#chat-container');
-      chatContainer.innerHTML += `<div class="chat-msg user"><div class="chat-bubble">${msg}</div></div>`;
+      chatContainer.innerHTML += `<div class="chat-msg user"><div class="chat-bubble">${escapeHtml(msg)}</div></div>`;
       chatContainer.innerHTML += '<div class="chat-msg assistant"><div class="chat-bubble loading-dots">Pensando...</div></div>';
       chatContainer.scrollTop = chatContainer.scrollHeight;
 
@@ -317,23 +318,6 @@ function attachCoachingEvents(container, profile, energy) {
       }
     });
   });
-}
-
-function formatAIResponse(text) {
-  return text
-    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/\n- /g, '\n<br>• ')
-    .replace(/\n\d\. /g, (m) => `<br>${m.trim()} `)
-    .replace(/\n/g, '<br>');
-}
-
-function showToast(message) {
-  const toast = document.createElement('div');
-  toast.className = 'toast';
-  toast.textContent = message;
-  document.body.appendChild(toast);
-  setTimeout(() => toast.classList.add('show'), 10);
-  setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 300); }, 2000);
 }
 
 export default { render };

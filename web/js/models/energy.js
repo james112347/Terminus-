@@ -15,6 +15,15 @@ const ENERGY_LOG_KEY = 'energy_scores';
 const ACTIVITY_LOG_KEY = 'activity_logs';
 const E = CONFIG.ENERGY;
 
+// === Today's Load Summary ===
+export function getTodayLoad() {
+  const activities = Storage.getToday(ACTIVITY_LOG_KEY);
+  const cogLoad = activities.reduce((s, a) => s + (a.cogLoad || 0) * (a.duration || 0) / 60, 0);
+  const physLoad = activities.reduce((s, a) => s + (a.physLoad || 0) * (a.duration || 0) / 60, 0);
+  const net = Math.round(cogLoad + physLoad);
+  return { cogLoad: Math.round(cogLoad), physLoad: Math.round(physLoad), net, activities: activities.length };
+}
+
 // === Activity Logging ===
 export function logActivity(type, durationMinutes, details = {}) {
   const actType = CONFIG.ACTIVITY_TYPES[type];
@@ -493,7 +502,7 @@ export function getWeeklyComponentAverages() {
 }
 
 export default {
-  logActivity, getTodayActivities, calcEnergyScore,
+  logActivity, getTodayActivities, getTodayLoad, calcEnergyScore,
   generatePredictionCurve, getEnergyHistory, getRoutineOutlook,
   getWeeklyComponentAverages,
 };

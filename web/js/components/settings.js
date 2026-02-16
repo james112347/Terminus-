@@ -7,6 +7,7 @@ import { initSupabase, auth } from '../services/supabase.js';
 import { healthCheck } from '../services/groq.js';
 import { requestPermission } from '../services/notifications.js';
 import { isConfigured as isSahhaConfigured } from '../services/sahha.js';
+import { showToast } from '../utils/ui.js';
 
 export function render(container) {
   loadConfig();
@@ -368,15 +369,6 @@ function showStatus(el, text, type) {
   if (!el) return;
   el.textContent = text;
   el.className = `status-msg ${type}`;
-}
-
-function showToast(message) {
-  const toast = document.createElement('div');
-  toast.className = 'toast';
-  toast.textContent = message;
-  document.body.appendChild(toast);
-  setTimeout(() => toast.classList.add('show'), 10);
-  setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 300); }, 2000);
 }
 
 export default { render };

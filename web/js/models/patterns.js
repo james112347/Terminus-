@@ -612,7 +612,15 @@ function getGrade(score) {
 // ============================================================
 // SMART Goals Generator (enhanced with bottleneck awareness)
 // ============================================================
-export function generateSMARTGoals(profile) {
+export function generateSMARTGoals(bottleneckOrProfile, maybeProfile) {
+  // Support both signatures: (profile) and (bottleneck, profile) for GSD/Ralph compatibility
+  let profile;
+  if (maybeProfile) {
+    profile = maybeProfile;
+  } else {
+    profile = bottleneckOrProfile;
+  }
+
   const report = generateWeeklyReport();
   const predictions = generatePredictions();
   const goals = [];
@@ -730,8 +738,44 @@ export function runFullPipeline() {
   return { patterns, trends, correlations, predictions, weeklyReport };
 }
 
+// ============================================================
+// Bridge Functions (aliases for GSD/Ralph pipeline compatibility)
+// ============================================================
+
+// Alias: analyzeCorrelations → discoverCorrelations
+export const analyzeCorrelations = discoverCorrelations;
+
+// Get energy trend for N days (used by Ralph Loop)
+export function getEnergyTrend(days = 14) {
+  const trends = analyzeTrends();
+  const energyTrend = trends.energy;
+  if (!energyTrend || energyTrend.trend === 'insufficient') {
+    return { trend: 'insufficient', slope: 0, average: 0 };
+  }
+  const windowKey = days >= 30 ? '30d' : days >= 14 ? '14d' : '7d';
+  const window = energyTrend.windows?.[windowKey] || energyTrend.windows?.['7d'] || {};
+  return {
+    trend: window.trend || 'stable',
+    slope: window.slope || 0,
+    average: window.mean || 0,
+  };
+}
+
+// Identify the weakest component this week (used by GSD/Ralph)
+export function identifyWeeklyBottleneck() {
+  const report = generateWeeklyReport();
+  if (!report.available || !report.bottleneck) return null;
+  return {
+    component: report.bottleneck.component,
+    label: report.bottleneck.label,
+    avgScore: report.bottleneck.avgScore,
+    percentage: Math.round((1 - report.bottleneck.avgScore / 25) * 100),
+  };
+}
+
 export default {
   detectAllPatterns, analyzeTrends, discoverCorrelations,
+  analyzeCorrelations, getEnergyTrend, identifyWeeklyBottleneck,
   generatePredictions, generateWeeklyReport, generateSMARTGoals,
   runFullPipeline,
 };
