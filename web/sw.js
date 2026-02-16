@@ -1,7 +1,7 @@
 // Terminus PWA - Service Worker
 // Offline caching strategy: Cache First for assets, Network First for API calls
 
-const CACHE_NAME = 'terminus-v2.0.0';
+const CACHE_NAME = 'terminus-v3.0.0';
 const STATIC_ASSETS = [
   './',
   './index.html',
@@ -18,6 +18,11 @@ const STATIC_ASSETS = [
   './js/models/caffeine.js',
   './js/models/hydration.js',
   './js/models/patterns.js',
+  './js/models/allostatic.js',
+  './js/models/checkin.js',
+  './js/models/lifestyle.js',
+  './js/models/habits.js',
+  './js/models/guidance.js',
   './js/models/gsd-pipeline.js',
   './js/models/ralph-loop.js',
   './js/services/groq.js',

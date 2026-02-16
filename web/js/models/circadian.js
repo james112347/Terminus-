@@ -1,130 +1,148 @@
-// Terminus PWA - Circadian Rhythm Model
-// Calculates circadian alignment score based on chronotype and current time
+// Terminus PWA - Circadian Model v3.0
+// Borbély Two-Process Model: Process C (circadian) + Process S (homeostatic sleep pressure)
+// Includes BRAC ultradian cycles, post-prandial dip, CAR, chronotype phase shifts
 
 import { CONFIG } from '../config.js';
-import { minutesSinceMidnight, parseTimeToday, hoursBetween } from '../utils/datetime.js';
+import { Storage } from '../utils/storage.js';
 import { clamp } from '../utils/stats.js';
+import { minutesSinceMidnight } from '../utils/datetime.js';
 
-// Standard cortisol curve (normalized 0-1) for each chronotype
-// Based on chronobiology research: cortisol peaks ~30min after waking (CAR)
-// then gradually declines with a small afternoon bump
+const E = CONFIG.ENERGY;
 
-function getCortisolCurve(chronotype) {
+// === PROCESS C: Circadian Drive (24h biological clock) ===
+function processC(minuteOfDay, chronotype) {
   const ct = CONFIG.CHRONOTYPES[chronotype] || CONFIG.CHRONOTYPES.ORSO;
-  const wakeMinutes = parseTimeMinutes(ct.wakeTime);
-  const carPeak = wakeMinutes + 30; // Cortisol Awakening Response peaks 30min after wake
+  const phaseShift = ct.processC_phase * 60;
+  const shifted = (minuteOfDay - phaseShift + 1440) % 1440;
+  const theta = (shifted / 1440) * 2 * Math.PI;
+  const primary = 0.5 + 0.5 * Math.cos(theta - (600 / 1440) * 2 * Math.PI);
+  const afternoonDipCenter = 870 + phaseShift;
+  const distToDip = Math.abs(((minuteOfDay - afternoonDipCenter + 720) % 1440) - 720);
+  const afternoonDip = distToDip < 90 ? 0.15 * (1 - distToDip / 90) : 0;
+  return clamp(primary - afternoonDip, 0, 1);
+}
 
-  // Generate 24-hour cortisol curve
-  // Pattern: low during sleep, sharp rise at wake (CAR), gradual decline, small 14:00 bump
-  return function(minuteOfDay) {
-    const m = minuteOfDay % 1440;
-    const sleepMinutes = parseTimeMinutes(ct.sleepTime);
-    const isAsleep = sleepMinutes > wakeMinutes
-      ? (m >= sleepMinutes || m < wakeMinutes)
-      : (m >= sleepMinutes && m < wakeMinutes);
+// === PROCESS S: Homeostatic Sleep Pressure ===
+function processS(hoursAwake, sleepDebtHours = 0) {
+  const tau = 16;
+  const pressure = 1 - Math.exp(-hoursAwake / tau);
+  const debtOffset = Math.min(sleepDebtHours * 0.03, 0.3);
+  return clamp(pressure + debtOffset, 0, 1);
+}
 
-    if (isAsleep) return 0.1; // Cortisol nadir during sleep
+// === BRAC: Basic Rest-Activity Cycle (90-100min ultradian cycles) ===
+function bracModulation(hoursAwake) {
+  const minutesAwake = hoursAwake * 60;
+  const phase = (minutesAwake % E.BRAC_CYCLE_MINUTES) / E.BRAC_CYCLE_MINUTES;
+  return 0.05 * Math.sin(phase * 2 * Math.PI);
+}
 
-    // Minutes since waking
-    let awakeMinutes = m - wakeMinutes;
-    if (awakeMinutes < 0) awakeMinutes += 1440;
-
-    // CAR phase (0-60min after wake): sharp rise
-    if (awakeMinutes <= 30) {
-      return 0.1 + (0.9 * awakeMinutes / 30);
+// === POST-PRANDIAL DIP: Energy drop after meals ===
+function postPrandialDip(currentTime, mealTimes) {
+  if (!mealTimes || mealTimes.length === 0) return 0;
+  const now = currentTime instanceof Date ? currentTime.getTime() : Date.now();
+  let totalDip = 0;
+  mealTimes.forEach(mealTime => {
+    const minutesSinceMeal = (now - new Date(mealTime).getTime()) / 60000;
+    if (minutesSinceMeal > 0 && minutesSinceMeal < E.POST_PRANDIAL_DIP_DURATION) {
+      const peakAt = 37.5;
+      const sigma = E.POST_PRANDIAL_DIP_DURATION / 4;
+      const gaussian = Math.exp(-0.5 * ((minutesSinceMeal - peakAt) / sigma) ** 2);
+      totalDip += E.POST_PRANDIAL_DIP_INTENSITY * gaussian;
     }
-    if (awakeMinutes <= 60) {
-      return 1.0 - (0.15 * (awakeMinutes - 30) / 30); // slight decline from peak
-    }
+  });
+  return Math.min(totalDip, 0.25);
+}
 
-    // Morning plateau (1-4h after wake)
-    if (awakeMinutes <= 240) {
-      return 0.85 - (0.15 * (awakeMinutes - 60) / 180);
-    }
+// === CAR: Cortisol Awakening Response ===
+function cortisolAwakeningResponse(minutesSinceWake) {
+  if (minutesSinceWake < 0 || minutesSinceWake > E.CAR_DURATION_MINUTES) return 0;
+  const peak = E.CAR_PEAK_MINUTES;
+  if (minutesSinceWake <= peak) return 0.2 * (minutesSinceWake / peak);
+  return 0.2 * (1 - (minutesSinceWake - peak) / (E.CAR_DURATION_MINUTES - peak));
+}
 
-    // Afternoon dip (4-8h after wake) with small cortisol bump around 6h
-    if (awakeMinutes <= 480) {
-      const phase = (awakeMinutes - 240) / 240;
-      const dip = 0.7 - 0.2 * Math.sin(phase * Math.PI); // dip then slight recovery
-      return dip;
-    }
+// === MAIN: Calculate Circadian Score (0-25) ===
+export function calcCircadianScore(profile, currentTime = new Date()) {
+  const chronotype = profile?.chronotype || 'ORSO';
+  const ct = CONFIG.CHRONOTYPES[chronotype] || CONFIG.CHRONOTYPES.ORSO;
+  const wakeTime = profile?.actualWakeTime ? new Date(profile.actualWakeTime) : parseWakeTime(ct.wakeTime);
+  const hoursAwake = Math.max(0, (currentTime - wakeTime) / 3600000);
+  const minute = minutesSinceMidnight(currentTime);
 
-    // Evening decline (8h+ after wake)
-    const hoursLate = (awakeMinutes - 480) / 60;
-    return Math.max(0.15, 0.5 - hoursLate * 0.06);
+  // Sleep window check
+  const sleepMinute = parseTimeToMinutes(ct.sleepTime);
+  const wakeMinute = parseTimeToMinutes(ct.wakeTime);
+  const inSleepWindow = sleepMinute > wakeMinute
+    ? (minute >= sleepMinute || minute < wakeMinute)
+    : (minute >= sleepMinute && minute < wakeMinute);
+  if (inSleepWindow) return { score: 2, phase: { name: 'Sonno', icon: '🌙', label: 'Sonno', suggestion: 'Dovresti dormire' }, details: {} };
+
+  const cDrive = processC(minute, chronotype);
+  const sPressure = processS(hoursAwake, profile?.sleepDebt || 0);
+  let alertness = cDrive - sPressure * 0.6;
+  alertness += bracModulation(hoursAwake);
+  const minutesSinceWake = hoursAwake * 60;
+  alertness += cortisolAwakeningResponse(minutesSinceWake);
+
+  const mealTimes = Storage.getToday('activity_logs').filter(a => a.type === 'MEAL').map(a => a.timestamp);
+  alertness -= postPrandialDip(currentTime, mealTimes);
+
+  const actualWakeMinute = wakeTime.getHours() * 60 + wakeTime.getMinutes();
+  const optimalWakeMinute = parseTimeToMinutes(ct.wakeTime);
+  const wakeDeviation = Math.abs(actualWakeMinute - optimalWakeMinute);
+  const alignmentPenalty = Math.min(wakeDeviation / 120, 0.15);
+  alertness -= alignmentPenalty;
+
+  const score = Math.round(clamp(alertness * 25, 0, 25));
+  const hour = minute / 60;
+
+  // Phase detection
+  let phase = { name: 'Attivo', icon: '📊', label: 'Fase Attiva', suggestion: 'Task standard' };
+  if (hoursAwake <= 1) phase = { name: 'CAR', icon: '🌅', label: 'Risveglio (CAR)', suggestion: 'Luce naturale + idratazione' };
+  else if (hoursAwake >= 14) phase = { name: 'Wind-down', icon: '🌙', label: 'Wind-down', suggestion: 'Inizia a rilassarti' };
+  else {
+    for (const peak of ct.peakWindows) {
+      if (hour >= peak.start && hour < peak.end) { phase = { name: 'Picco', icon: '⚡', label: 'Picco Energetico', suggestion: 'Ideale per lavoro profondo' }; break; }
+    }
+    for (const dip of ct.dipWindows) {
+      if (hour >= dip.start && hour < dip.end) { phase = { name: 'Calo', icon: '📉', label: 'Calo Pomeridiano', suggestion: 'Task leggeri o pausa' }; break; }
+    }
+  }
+
+  return {
+    score, phase,
+    details: {
+      processC: Math.round(cDrive * 100) / 100,
+      processS: Math.round(sPressure * 100) / 100,
+      alertness: Math.round(alertness * 100) / 100,
+      hoursAwake: Math.round(hoursAwake * 10) / 10,
+      brac: Math.round(bracModulation(hoursAwake) * 100) / 100,
+      car: Math.round(cortisolAwakeningResponse(minutesSinceWake) * 100) / 100,
+      postPrandial: Math.round(postPrandialDip(currentTime, mealTimes) * 100) / 100,
+      alignmentPenalty: Math.round(alignmentPenalty * 100) / 100,
+    },
   };
 }
 
-function parseTimeMinutes(timeStr) {
-  const [h, m] = timeStr.split(':').map(Number);
-  return h * 60 + m;
-}
-
-// Calculate Circadian Alignment Score (0-100)
-// High score = current time aligns well with chronotype's natural rhythm
-export function calcCircadianScore(chronotype, currentTime = new Date()) {
-  const curve = getCortisolCurve(chronotype);
-  const currentMinute = minutesSinceMidnight(currentTime);
-  const cortisolNow = curve(currentMinute);
-
-  // Score is based on cortisol level (higher cortisol = more alert = higher score)
-  return Math.round(clamp(cortisolNow * 100, 0, 100));
-}
-
-// Calculate CAR (Cortisol Awakening Response) quality
-// Based on actual wake time vs optimal wake time for chronotype
-export function calcCARScore(chronotype, actualWakeTime) {
-  const ct = CONFIG.CHRONOTYPES[chronotype] || CONFIG.CHRONOTYPES.ORSO;
-  const optimalWake = parseTimeToday(ct.wakeTime);
-  const deviation = Math.abs(hoursBetween(actualWakeTime, optimalWake));
-
-  // Penalty for deviation from optimal wake time
-  // Each hour of deviation reduces CAR quality by ~15%
-  const penalty = Math.min(deviation * 15, 60);
-  return Math.round(clamp(100 - penalty, 20, 100));
-}
-
-// Get energy prediction curve for next 12 hours
-export function getEnergyPrediction(chronotype, currentTime = new Date()) {
-  const curve = getCortisolCurve(chronotype);
-  const currentMinute = minutesSinceMidnight(currentTime);
+// Generate 12h prediction curve
+export function getEnergyPrediction(profile, currentTime = new Date()) {
   const points = [];
-
-  for (let i = 0; i <= 720; i += 30) { // Every 30 min for 12 hours
-    const minute = (currentMinute + i) % 1440;
-    const hour = i / 60;
-    points.push({
-      x: hour,
-      y: Math.round(curve(minute) * 100),
-      time: `${Math.floor((currentTime.getHours() + hour) % 24)}:${String(Math.round((i % 60))).padStart(2, '0')}`,
-    });
+  const chronotype = profile?.chronotype || 'ORSO';
+  const ct = CONFIG.CHRONOTYPES[chronotype] || CONFIG.CHRONOTYPES.ORSO;
+  const wakeTime = profile?.actualWakeTime ? new Date(profile.actualWakeTime) : parseWakeTime(ct.wakeTime);
+  for (let i = 0; i <= 48; i++) {
+    const futureTime = new Date(currentTime.getTime() + i * 15 * 60000);
+    const hoursAwake = Math.max(0, (futureTime - wakeTime) / 3600000);
+    const minute = minutesSinceMidnight(futureTime);
+    let alertness = processC(minute, chronotype) - processS(hoursAwake, profile?.sleepDebt || 0) * 0.6;
+    alertness += bracModulation(hoursAwake);
+    points.push({ x: i * 0.25, y: Math.round(clamp(alertness * 100, 0, 100)), time: futureTime.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }) });
   }
-
   return points;
 }
 
-// Get current phase description
-export function getCurrentPhase(chronotype, currentTime = new Date()) {
-  const ct = CONFIG.CHRONOTYPES[chronotype] || CONFIG.CHRONOTYPES.ORSO;
-  const wakeMinutes = parseTimeMinutes(ct.wakeTime);
-  const sleepMinutes = parseTimeMinutes(ct.sleepTime);
-  const currentMinute = minutesSinceMidnight(currentTime);
+function parseTimeToMinutes(timeStr) { const [h, m] = timeStr.split(':').map(Number); return h * 60 + (m || 0); }
+function parseWakeTime(timeStr) { const [h, m] = timeStr.split(':').map(Number); const d = new Date(); d.setHours(h, m || 0, 0, 0); if (d > new Date()) d.setDate(d.getDate() - 1); return d; }
 
-  let awakeMinutes = currentMinute - wakeMinutes;
-  if (awakeMinutes < 0) awakeMinutes += 1440;
-
-  // Determine if in sleep window
-  const inSleepWindow = sleepMinutes > wakeMinutes
-    ? (currentMinute >= sleepMinutes || currentMinute < wakeMinutes)
-    : (currentMinute >= sleepMinutes && currentMinute < wakeMinutes);
-
-  if (inSleepWindow) return { phase: 'sleep', label: 'Sonno', icon: '🌙', suggestion: 'Dovresti dormire' };
-  if (awakeMinutes <= 60) return { phase: 'car', label: 'Risveglio (CAR)', icon: '🌅', suggestion: 'Luce naturale + idratazione' };
-  if (awakeMinutes <= 240) return { phase: 'peak', label: 'Picco Mattutino', icon: '⚡', suggestion: 'Ideale per lavoro profondo' };
-  if (awakeMinutes <= 360) return { phase: 'sustain', label: 'Fase Sostenuta', icon: '📊', suggestion: 'Buono per task complessi' };
-  if (awakeMinutes <= 480) return { phase: 'dip', label: 'Calo Pomeridiano', icon: '📉', suggestion: 'Pausa o task leggeri' };
-  if (awakeMinutes <= 600) return { phase: 'recovery', label: 'Ripresa Serale', icon: '🔄', suggestion: 'Task creativi o sociali' };
-  return { phase: 'winddown', label: 'Wind-down', icon: '🌙', suggestion: 'Inizia a rilassarti' };
-}
-
-export default { calcCircadianScore, calcCARScore, getEnergyPrediction, getCurrentPhase };
+export default { calcCircadianScore, getEnergyPrediction };

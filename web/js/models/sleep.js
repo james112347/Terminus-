@@ -1,26 +1,24 @@
-// Terminus PWA - Sleep Model
-// Accumulator model for sleep debt calculation over 7-day rolling window
+// Terminus PWA - Sleep Model v3.0
+// Van Dongen Model: cumulative sleep debt with recency weighting
+// Nap partial recovery, alcohol impact, Sahha readiness
 
 import { CONFIG } from '../config.js';
 import { Storage } from '../utils/storage.js';
 import { mean, clamp } from '../utils/stats.js';
 
 const SLEEP_KEY = 'sleep_logs';
-
-// Sleep log entry structure:
-// { date, bedtime, wakeTime, duration, quality, phases: { rem, deep, light, awake }, notes }
+const E = CONFIG.ENERGY;
 
 export function logSleep(entry) {
   const log = {
     date: entry.date || new Date().toISOString().split('T')[0],
-    bedtime: entry.bedtime,
-    wakeTime: entry.wakeTime,
+    bedtime: entry.bedtime, wakeTime: entry.wakeTime,
     duration: entry.duration || calcDuration(entry.bedtime, entry.wakeTime),
-    quality: entry.quality || null, // 1-5 subjective
-    phases: entry.phases || null, // from Sahha/wearable
-    latency: entry.latency || null, // minutes to fall asleep
-    interruptions: entry.interruptions || 0,
-    notes: entry.notes || '',
+    quality: entry.quality || null, phases: entry.phases || null,
+    latency: entry.latency || null, interruptions: entry.interruptions || 0,
+    alcoholDrinks: entry.alcoholDrinks || 0, notes: entry.notes || '',
+    isNap: entry.isNap || false, napDuration: entry.napDuration || null,
+    sahhaReadiness: entry.sahhaReadiness || null,
     timestamp: new Date().toISOString(),
   };
   Storage.append(SLEEP_KEY, log);
@@ -31,135 +29,103 @@ function calcDuration(bedtime, wakeTime) {
   const bed = new Date(`2000-01-01T${bedtime}`);
   let wake = new Date(`2000-01-01T${wakeTime}`);
   if (wake <= bed) wake.setDate(wake.getDate() + 1);
-  return (wake - bed) / 3600000; // hours
+  return (wake - bed) / 3600000;
 }
 
-// Get sleep logs for last N days
-export function getSleepLogs(days = 7) {
-  return Storage.getLastDays(SLEEP_KEY, days);
-}
+export function getSleepLogs(days = 7) { return Storage.getLastDays(SLEEP_KEY, days); }
 
-// Calculate sleep debt over rolling window
-// Sleep debt = sum of (optimal - actual) over N days
-export function calcSleepDebt(days = 7) {
-  const logs = getSleepLogs(days);
-  const optimal = CONFIG.ENERGY.SLEEP_OPTIMAL_HOURS;
+// === MAIN: Sleep Score (0-25) — Van Dongen Model ===
+export function calcSleepScore(profile) {
+  const logs = getSleepLogs(E.SLEEP_DEBT_WINDOW_DAYS);
+  const optimal = profile?.idealSleep || E.SLEEP_OPTIMAL_HOURS;
+  if (logs.length === 0) return { score: 15, debt: 0, avgDuration: optimal, trend: 'unknown', details: {} };
 
-  if (logs.length === 0) return { debt: 0, avgDuration: optimal, score: 75 };
+  const nightLogs = logs.filter(l => !l.isNap);
+  const weights = E.SLEEP_RECENCY_WEIGHTS;
+  let weightedDebt = 0, weightedDuration = 0, totalWeight = 0;
 
-  let totalDebt = 0;
-  const durations = [];
+  const daysBucket = new Array(E.SLEEP_DEBT_WINDOW_DAYS).fill(null);
+  nightLogs.forEach(log => {
+    const daysAgo = Math.floor((Date.now() - new Date(log.date || log.timestamp).getTime()) / 86400000);
+    if (daysAgo >= 0 && daysAgo < E.SLEEP_DEBT_WINDOW_DAYS) daysBucket[daysAgo] = log;
+  });
 
-  // Fill in missing days with estimated sleep (6h default)
-  const daysData = new Array(days).fill(6);
-  logs.forEach(log => {
-    const daysAgo = Math.floor((Date.now() - new Date(log.date).getTime()) / 86400000);
-    if (daysAgo >= 0 && daysAgo < days) {
-      daysData[daysAgo] = log.duration;
+  daysBucket.forEach((log, i) => {
+    const w = weights[i] || 0.1;
+    const dur = log ? log.duration : 6;
+    weightedDebt += Math.max(0, optimal - dur) * w;
+    weightedDuration += dur * w;
+    totalWeight += w;
+  });
+
+  const avgDuration = totalWeight > 0 ? weightedDuration / totalWeight : 6;
+  const totalDebt = Math.round(weightedDebt * 10) / 10;
+
+  // Quality (1-10 → factor)
+  const qualityLogs = nightLogs.filter(l => l.quality);
+  let qualityFactor = 0.7;
+  if (qualityLogs.length > 0) qualityFactor = mean(qualityLogs.map(l => l.quality)) / 10;
+
+  // Alcohol impact
+  const lastNight = daysBucket[0];
+  let alcoholPenalty = 0;
+  if (lastNight?.alcoholDrinks > 0) {
+    alcoholPenalty = lastNight.alcoholDrinks * E.ALCOHOL_SLEEP_PENALTY;
+    qualityFactor *= (1 - alcoholPenalty);
+  }
+
+  // Nap recovery
+  const napLogs = logs.filter(l => l.isNap);
+  let napRecovery = 0;
+  napLogs.forEach(nap => {
+    const napHours = (nap.napDuration || nap.duration * 60) / 60;
+    napRecovery += napHours * E.NAP_RECOVERY_FACTOR;
+  });
+
+  // Sahha readiness
+  let sahhaBonus = 0;
+  if (lastNight?.sahhaReadiness) sahhaBonus = ((lastNight.sahhaReadiness / 100) - 0.5) * 3;
+
+  // Phase score
+  let phaseScore = null;
+  if (lastNight?.phases) {
+    const p = lastNight.phases, total = (p.rem||0)+(p.deep||0)+(p.light||0)+(p.awake||0);
+    if (total > 0) {
+      let s = 100;
+      const remPct = (p.rem||0)/total*100, deepPct = (p.deep||0)/total*100, awakePct = (p.awake||0)/total*100;
+      if (remPct < 15) s -= (15-remPct)*2; if (deepPct < 10) s -= (10-deepPct)*3; if (awakePct > 5) s -= (awakePct-5)*3;
+      phaseScore = Math.round(clamp(s, 0, 100));
     }
-  });
+  }
 
-  daysData.forEach(duration => {
-    durations.push(duration);
-    totalDebt += Math.max(0, optimal - duration);
-  });
+  // Compute (0-25)
+  const durationScore = clamp((avgDuration / optimal) * 12, 0, 12);
+  const debtPenalty = clamp(totalDebt * 0.8, 0, 6);
+  const qualityBonus = qualityFactor * 5;
+  const napBonus = clamp(napRecovery * 1.5, 0, 2);
+  const rawScore = durationScore - debtPenalty + qualityBonus + napBonus + sahhaBonus;
+  const score = Math.round(clamp(rawScore, 0, 25));
 
-  const avgDuration = mean(durations);
-
-  // Score calculation:
-  // 0 debt = 100, each hour of debt reduces by ~7 points
-  // Also penalize if average is too far from optimal
-  const debtPenalty = Math.min(totalDebt * 7, 60);
-  const avgPenalty = Math.abs(avgDuration - optimal) * 5;
-  const score = clamp(100 - debtPenalty - avgPenalty, 0, 100);
+  const durations = nightLogs.map(l => l.duration);
+  let trend = 'stable';
+  if (durations.length >= 3) {
+    const r = mean(durations.slice(0,3)), e = mean(durations.slice(-3));
+    if (r-e > 0.5) trend = 'improving'; else if (e-r > 0.5) trend = 'declining';
+  }
 
   return {
-    debt: Math.round(totalDebt * 10) / 10,
-    avgDuration: Math.round(avgDuration * 10) / 10,
-    score: Math.round(score),
-    logs: logs.slice(-7),
-    trend: calcSleepTrend(durations),
+    score, debt: totalDebt, avgDuration: Math.round(avgDuration*10)/10,
+    qualityScore: Math.round(qualityFactor*100), phaseScore, napRecovery: Math.round(napRecovery*10)/10,
+    trend, alcoholPenalty: Math.round(alcoholPenalty*100), logs: nightLogs.slice(0,7),
+    details: { durationScore: Math.round(durationScore*10)/10, debtPenalty: Math.round(debtPenalty*10)/10, qualityBonus: Math.round(qualityBonus*10)/10, napBonus: Math.round(napBonus*10)/10, sahhaBonus: Math.round(sahhaBonus*10)/10 },
   };
 }
 
-// Calculate trend: improving, stable, declining
-function calcSleepTrend(durations) {
-  if (durations.length < 3) return 'stable';
-  const recent = mean(durations.slice(0, 3));
-  const earlier = mean(durations.slice(-3));
-  const diff = recent - earlier;
-  if (diff > 0.5) return 'improving';
-  if (diff < -0.5) return 'declining';
-  return 'stable';
-}
-
-// Calculate sleep phase quality score (if wearable data available)
-export function calcPhaseScore(phases) {
-  if (!phases) return null;
-
-  // Ideal distribution (% of total):
-  // REM: 20-25%, Deep: 15-20%, Light: 50-55%, Awake: <5%
-  const total = (phases.rem || 0) + (phases.deep || 0) + (phases.light || 0) + (phases.awake || 0);
-  if (total === 0) return null;
-
-  const remPct = (phases.rem / total) * 100;
-  const deepPct = (phases.deep / total) * 100;
-  const awakePct = (phases.awake / total) * 100;
-
-  let score = 100;
-
-  // REM penalty
-  if (remPct < 15) score -= (15 - remPct) * 2;
-  else if (remPct > 30) score -= (remPct - 30) * 1.5;
-
-  // Deep sleep penalty
-  if (deepPct < 10) score -= (10 - deepPct) * 3;
-  else if (deepPct > 25) score -= (deepPct - 25) * 1;
-
-  // Awake penalty
-  if (awakePct > 5) score -= (awakePct - 5) * 3;
-
-  return Math.round(clamp(score, 0, 100));
-}
-
-// Sleep efficiency: time asleep / time in bed
 export function calcSleepEfficiency(log) {
-  if (!log || !log.duration) return null;
-  const awakeTime = log.latency ? log.latency / 60 : 0;
-  const interruptionTime = (log.interruptions || 0) * 0.15; // estimate 9min per interruption
-  const actualSleep = log.duration - awakeTime - interruptionTime;
-  return Math.round(clamp((actualSleep / log.duration) * 100, 0, 100));
+  if (!log?.duration) return null;
+  const awakeTime = log.latency ? log.latency/60 : 0;
+  const intTime = (log.interruptions||0)*0.15;
+  return Math.round(clamp(((log.duration-awakeTime-intTime)/log.duration)*100, 0, 100));
 }
 
-// Get sleep recommendations based on current data
-export function getSleepRecommendations(sleepData) {
-  const recommendations = [];
-
-  if (sleepData.debt > 3) {
-    recommendations.push({
-      priority: 'high',
-      text: `Hai un debito di sonno di ${sleepData.debt}h. Vai a letto 30min prima stasera.`,
-      icon: '🛏️',
-    });
-  }
-
-  if (sleepData.avgDuration < 6.5) {
-    recommendations.push({
-      priority: 'high',
-      text: `Media di ${sleepData.avgDuration}h/notte. L'obiettivo è ${CONFIG.ENERGY.SLEEP_OPTIMAL_HOURS}h.`,
-      icon: '⚠️',
-    });
-  }
-
-  if (sleepData.trend === 'declining') {
-    recommendations.push({
-      priority: 'medium',
-      text: 'Il tuo sonno sta peggiorando. Rivedi la routine serale.',
-      icon: '📉',
-    });
-  }
-
-  return recommendations;
-}
-
-export default { logSleep, getSleepLogs, calcSleepDebt, calcPhaseScore, calcSleepEfficiency, getSleepRecommendations };
+export default { logSleep, getSleepLogs, calcSleepScore, calcSleepEfficiency };
