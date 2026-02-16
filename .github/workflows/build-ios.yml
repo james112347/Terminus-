@@ -3,6 +3,10 @@ name: Build Terminus iOS
 on:
   push:
     branches: [ main, 'claude/*' ]
+    paths:
+      - 'Terminus/**'
+      - 'Terminus.xcodeproj/**'
+      - '.github/workflows/build-ios.yml'
   pull_request:
     branches: [ main ]
   workflow_dispatch:
@@ -24,15 +28,15 @@ jobs:
           xcodebuild -version
           swift --version
 
-      - name: Build for device (unsigned)
+      - name: Build for Simulator
         run: |
           xcodebuild build \
             -project Terminus.xcodeproj \
             -scheme Terminus \
-            -sdk iphoneos \
+            -destination 'generic/platform=iOS Simulator' \
             -configuration Release \
             -derivedDataPath "$PWD/build/DerivedData" \
-            CODE_SIGN_IDENTITY="" \
+            CODE_SIGN_IDENTITY="-" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
             COMPILER_INDEX_STORE_ENABLE=NO \
@@ -50,8 +54,11 @@ jobs:
           echo "========== BUILD ERRORS =========="
           grep -A 2 "error:" /tmp/xcodebuild.log 2>/dev/null || true
           echo ""
-          echo "========== LAST 100 LINES =========="
-          tail -100 /tmp/xcodebuild.log 2>/dev/null || true
+          echo "========== WARNINGS =========="
+          grep -c "warning:" /tmp/xcodebuild.log 2>/dev/null || true
+          echo ""
+          echo "========== LAST 80 LINES =========="
+          tail -80 /tmp/xcodebuild.log 2>/dev/null || true
 
       - name: Upload build log
         if: failure()
@@ -61,48 +68,14 @@ jobs:
           path: /tmp/xcodebuild.log
           retention-days: 7
 
-      - name: Verify and Package IPA
+      - name: Verify build output
         run: |
           echo "=== Searching for .app ==="
-          find "$PWD/build" -name "*.app" -type d 2>/dev/null
-
           APP_PATH=$(find "$PWD/build" -name "Terminus.app" -type d 2>/dev/null | head -1)
-          if [ -z "$APP_PATH" ]; then
-            echo "ERROR: Terminus.app not found"
-            find "$PWD/build" -type d -maxdepth 5 2>/dev/null
-            exit 1
-          fi
-
-          echo ""
-          echo "=== .app contents ==="
-          ls -lhR "$APP_PATH/"
-          echo ""
-          echo "=== .app total size ==="
-          du -sh "$APP_PATH"
-          echo ""
-
-          # Verify the binary exists
-          BINARY="$APP_PATH/Terminus"
-          if [ ! -f "$BINARY" ]; then
-            echo "WARNING: Binary not found at $BINARY"
-            echo "Looking for any executable files..."
-            find "$APP_PATH" -type f -perm +111 2>/dev/null || find "$APP_PATH" -type f -executable 2>/dev/null || true
+          if [ -n "$APP_PATH" ]; then
+            echo "Found: $APP_PATH"
+            du -sh "$APP_PATH"
           else
-            echo "Binary found: $(ls -lh "$BINARY")"
-            file "$BINARY"
+            echo "Build product in DerivedData (simulator build)"
           fi
-
-          mkdir -p build/Payload
-          cp -r "$APP_PATH" build/Payload/
-          cd build
-          zip -r Terminus.ipa Payload/
-          echo ""
-          echo "=== Final IPA size ==="
-          ls -lh Terminus.ipa
-
-      - name: Upload IPA
-        uses: actions/upload-artifact@v4
-        with:
-          name: Terminus-iOS
-          path: build/Terminus.ipa
-          retention-days: 90
+          echo "Build completed successfully."

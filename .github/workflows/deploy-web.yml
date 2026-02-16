@@ -16,7 +16,39 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  validate:
+    name: Validate Web Assets
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate HTML
+        run: |
+          echo "Checking web/ structure..."
+          test -f web/index.html || { echo "ERROR: web/index.html missing"; exit 1; }
+          test -f web/manifest.json || { echo "ERROR: web/manifest.json missing"; exit 1; }
+          test -f web/sw.js || { echo "ERROR: web/sw.js missing"; exit 1; }
+          test -d web/js || { echo "ERROR: web/js/ missing"; exit 1; }
+          test -d web/css || { echo "ERROR: web/css/ missing"; exit 1; }
+          echo "All required files present."
+
+      - name: Check JS syntax
+        run: |
+          echo "Checking JS files for syntax errors..."
+          ERRORS=0
+          for f in $(find web/js -name '*.js'); do
+            node --check "$f" 2>/dev/null || { echo "SYNTAX ERROR: $f"; ERRORS=$((ERRORS+1)); }
+          done
+          if [ $ERRORS -gt 0 ]; then
+            echo "$ERRORS file(s) with syntax errors"
+            exit 1
+          fi
+          echo "All JS files pass syntax check."
+
   deploy:
+    needs: validate
+    if: github.ref == 'refs/heads/main'
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
