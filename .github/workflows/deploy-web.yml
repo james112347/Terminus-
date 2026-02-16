@@ -38,8 +38,14 @@ jobs:
           echo "Checking JS files for syntax errors..."
           ERRORS=0
           for f in $(find web/js -name '*.js'); do
-            node --check "$f" 2>/dev/null || { echo "SYNTAX ERROR: $f"; ERRORS=$((ERRORS+1)); }
+            # Copy as .mjs so Node parses ES module syntax (import/export)
+            cp "$f" /tmp/_syntax_check.mjs
+            if ! node --check /tmp/_syntax_check.mjs 2>&1; then
+              echo "SYNTAX ERROR: $f"
+              ERRORS=$((ERRORS+1))
+            fi
           done
+          rm -f /tmp/_syntax_check.mjs
           if [ $ERRORS -gt 0 ]; then
             echo "$ERRORS file(s) with syntax errors"
             exit 1
