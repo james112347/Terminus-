@@ -53,8 +53,8 @@ function detectWeeklyCycles(snapshots) {
     .sort((a, b) => a.dayIndex - b.dayIndex);
 
   // Find best and worst days
-  const best = result.reduce((a, b) => a.avgEnergy > b.avgEnergy ? a : b, result[0]);
-  const worst = result.reduce((a, b) => a.avgEnergy < b.avgEnergy ? a : b, result[0]);
+  const best = result.length > 0 ? result.reduce((a, b) => a.avgEnergy > b.avgEnergy ? a : b) : null;
+  const worst = result.length > 0 ? result.reduce((a, b) => a.avgEnergy < b.avgEnergy ? a : b) : null;
 
   return {
     days: result,
@@ -385,8 +385,10 @@ function generateCorrelationInterpretation(name, r, lowAvgY, highAvgY, invert) {
   const absR = Math.abs(r);
   if (absR < 0.3) return `Correlazione debole tra ${name.toLowerCase()}.`;
   const impact = highAvgY != null && lowAvgY != null ? Math.abs(highAvgY - lowAvgY) : 0;
-  if (r > 0 && !invert) return `Quando ${name.split(' → ')[0].toLowerCase()} è alto, ${name.split(' → ')[1].toLowerCase()} migliora di ~${impact} punti.`;
-  if (r < 0 || invert) return `Quando ${name.split(' → ')[0].toLowerCase()} aumenta, ${name.split(' → ')[1].toLowerCase()} peggiora di ~${impact} punti.`;
+  const parts = name.split(' → ');
+  if (parts.length < 2) return `Relazione significativa trovata per ${name.toLowerCase()}.`;
+  if (r > 0 && !invert) return `Quando ${parts[0].toLowerCase()} è alto, ${parts[1].toLowerCase()} migliora di ~${impact} punti.`;
+  if (r < 0 || invert) return `Quando ${parts[0].toLowerCase()} aumenta, ${parts[1].toLowerCase()} peggiora di ~${impact} punti.`;
   return `Relazione significativa trovata.`;
 }
 
@@ -639,8 +641,9 @@ export function generateSMARTGoals(bottleneckOrProfile, maybeProfile) {
 
   // Based on worst dimension
   const dimensions = report.dimensions;
-  const worst = Object.entries(dimensions)
-    .sort((a, b) => a[1].score - b[1].score)[0];
+  const sorted = Object.entries(dimensions).sort((a, b) => a[1].score - b[1].score);
+  if (sorted.length === 0) return goals;
+  const worst = sorted[0];
 
   switch (worst[0]) {
     case 'energy':

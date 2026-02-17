@@ -61,10 +61,10 @@ export function calcSleepScore(profile) {
   const avgDuration = totalWeight > 0 ? weightedDuration / totalWeight : 6;
   const totalDebt = Math.round(weightedDebt * 10) / 10;
 
-  // Quality (1-10 → factor)
+  // Quality (1-5 from modal → factor 0.2-1.0)
   const qualityLogs = nightLogs.filter(l => l.quality);
   let qualityFactor = 0.7;
-  if (qualityLogs.length > 0) qualityFactor = mean(qualityLogs.map(l => l.quality)) / 10;
+  if (qualityLogs.length > 0) qualityFactor = mean(qualityLogs.map(l => l.quality)) / 5;
 
   // Alcohol impact
   const lastNight = daysBucket[0];

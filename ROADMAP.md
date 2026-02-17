@@ -1,28 +1,30 @@
 # Terminus PWA - ROADMAP
 
-> Prossimi step dedotti dallo stato attuale del codice
+> Aggiornato: 2026-02-17
 
-## Fase 1: Core Fix (Critico)
+## Fase 1: Core Fix (Critico) - COMPLETATA Sprint 2
 > Rendere funzionante cio che esiste
 
-- [ ] Fix import rotti in GSD Pipeline (gsd-pipeline.js)
-- [ ] Fix import rotti in Ralph Loop (ralph-loop.js)
-- [ ] Fix import rotto in Timeline (getTodayLoad)
-- [ ] Aggiungere funzioni bridge mancanti (getTodayLoad, calcSleepDebt, getCurrentPhase, etc.)
-- [ ] Fix bug check-in (caffeine.length >= 0)
-- [ ] Testare che GSD Pipeline e Ralph Loop eseguano senza errori
+- [x] Fix import rotti in GSD Pipeline (gsd-pipeline.js)
+- [x] Fix import rotti in Ralph Loop (ralph-loop.js)
+- [x] Fix import rotto in Timeline (getTodayLoad)
+- [x] Aggiungere funzioni bridge mancanti
+- [x] Fix bug check-in (caffeine.length >= 0)
+- [x] Testare che GSD Pipeline e Ralph Loop eseguano senza errori
 
-## Fase 2: Stabilita
+## Fase 2: Stabilita - COMPLETATA Sprint 2-3
 > Eliminare fragilita e inconsistenze
 
-- [ ] Estrarre showToast() in modulo condiviso (utils/ui.js)
-- [ ] Estrarre formatAIResponse() in modulo condiviso
-- [ ] Sanitizzare input utente prima di renderizzare con innerHTML
-- [ ] Verificare coerenza scale (sleep quality 1-5 vs 1-10)
-- [ ] Aggiungere gestione errori dove manca (patterns.js con array vuoti)
-- [ ] Separare logica mood/focus da logActivity
+- [x] Estrarre showToast() in modulo condiviso (utils/ui.js)
+- [x] Estrarre formatAIResponse() in modulo condiviso
+- [x] Sanitizzare input utente prima di renderizzare con innerHTML
+- [x] Verificare coerenza scale (sleep quality 1-5 normalizzata)
+- [x] Aggiungere gestione errori (patterns.js array vuoti, division-by-zero)
+- [x] Fix operator precedence in profile.js
+- [x] Aggiornare SW cache con ui.js (v3.1.0)
+- [x] Fix CI workflows (deploy-web, build-ios)
 
-## Fase 3: Ottimizzazione
+## Fase 3: Ottimizzazione - PROSSIMA
 > Migliorare qualita algoritmica
 
 - [ ] Migliorare generatePredictions() con modello piu robusto

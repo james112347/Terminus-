@@ -339,7 +339,7 @@ function prefillForm(container, profile) {
 
   Object.entries(profile).forEach(([key, value]) => {
     const input = form.querySelector(`[name="${key}"]`);
-    if (input && typeof value === 'string' || typeof value === 'number') {
+    if (input && (typeof value === 'string' || typeof value === 'number')) {
       if (input.type === 'radio') {
         const radio = form.querySelector(`[name="${key}"][value="${value}"]`);
         if (radio) radio.checked = true;

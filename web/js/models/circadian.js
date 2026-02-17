@@ -58,8 +58,9 @@ function postPrandialDip(currentTime, mealTimes) {
 function cortisolAwakeningResponse(minutesSinceWake) {
   if (minutesSinceWake < 0 || minutesSinceWake > E.CAR_DURATION_MINUTES) return 0;
   const peak = E.CAR_PEAK_MINUTES;
-  if (minutesSinceWake <= peak) return 0.2 * (minutesSinceWake / peak);
-  return 0.2 * (1 - (minutesSinceWake - peak) / (E.CAR_DURATION_MINUTES - peak));
+  if (minutesSinceWake <= peak) return peak > 0 ? 0.2 * (minutesSinceWake / peak) : 0;
+  const denom = E.CAR_DURATION_MINUTES - peak;
+  return denom > 0 ? 0.2 * (1 - (minutesSinceWake - peak) / denom) : 0;
 }
 
 // === MAIN: Calculate Circadian Score (0-25) ===

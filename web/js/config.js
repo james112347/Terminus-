@@ -98,7 +98,7 @@ export const CONFIG = {
 
   // Quick check-in categories
   CHECKIN: {
-    sleepQuality: { label: 'Qualità sonno', scale: 10, icon: '😴' },
+    sleepQuality: { label: 'Qualità sonno', scale: 5, icon: '😴' },
     mood: { label: 'Umore', scale: 10, icon: '😊' },
     stress: { label: 'Stress', scale: 10, icon: '😰', inverted: true },
     focus: { label: 'Focus', scale: 10, icon: '🎯' },

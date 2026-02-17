@@ -65,7 +65,7 @@ export function calcHydrationProgress(weightKg, activityLevel = 'moderate') {
   const logs = getTodayHydration();
   const totalMl = logs.reduce((s, e) => s + e.ml, 0);
   const target = calcDailyTarget(weightKg, activityLevel);
-  const percentage = Math.round((totalMl / target) * 100);
+  const percentage = target > 0 ? Math.round((totalMl / target) * 100) : 0;
 
   return {
     consumed: totalMl,

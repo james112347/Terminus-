@@ -403,7 +403,7 @@ export function getRoutineOutlook(profile) {
   const latestDaily = dailyLogs.length > 0 ? dailyLogs[dailyLogs.length - 1] : {};
 
   const lifestyleProjection = {
-    hydrationPct: Math.round((hydrationMl / hydrationTarget) * 100),
+    hydrationPct: hydrationTarget > 0 ? Math.round((hydrationMl / hydrationTarget) * 100) : 0,
     hydrationRemaining: Math.max(0, hydrationTarget - hydrationMl),
     residualCaffeineBed: Math.round(residualCaffeineBed),
     screenMinutes: latestDaily.screenMinutes || 0,
